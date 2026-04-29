@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =============================================================
+ * CP-foreningens designsystem — DAM Søknadshjelpe
+ * Ground truth: design/DAM s_knadshjelpe/DESIGN-SYSTEM.md
+ * ============================================================= */
+
+@theme {
+  /* --- Farger: CP-blå (primær) --- */
+  --color-cp-blue: #0970b5;
+  --color-cp-blue-dark: #0a5a92;
+  --color-cp-blue-soft: #dcebf6;
+  --color-cp-blue-tint: #f2f8fc;
+
+  /* --- Farger: CP-rød (sekundær / fare) --- */
+  --color-cp-red: #d33352;
+  --color-cp-red-dark: #b22844;
+  --color-cp-red-soft: #fce5eb;
+  --color-cp-red-tint: #fdf2f4;
+
+  /* --- Tekst-farger (ink-skala) --- */
+  --color-ink-1: #0a1a1a;
+  --color-ink-2: #1f2937;
+  --color-ink-3: #4b5563;
+  --color-ink-4: #6b7280;
+  --color-ink-5: #9ca3af;
+
+  /* --- Linje-farger --- */
+  --color-line-1: #e5e7eb;
+  --color-line-2: #eef1f3;
+  --color-line-3: #f3f4f6;
+
+  /* --- Bakgrunner --- */
+  --color-bg-app: #fafaf7;
+  --color-bg-card: #ffffff;
+  --color-bg-sunk: #f4f2ee;
+
+  /* --- Status-farger --- */
+  --color-good: #15803d;
+  --color-good-soft: #dcfce7;
+  --color-warm: #d33352;
+  --color-warm-soft: #fce5eb;
+  --color-warm-tint: #fdf2f4;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+
+  /* --- Skrifter --- */
+  --font-sans: var(--font-inter), "Texta Pro", system-ui, sans-serif;
+  --font-display: var(--font-droid-serif), Georgia, serif;
+  --font-mono: ui-monospace, "JetBrains Mono", monospace;
+
+  /* --- Skygger --- */
+  --shadow-cp-sm: 0 1px 2px rgba(15, 23, 23, 0.04), 0 0 0 1px rgba(15, 23, 23, 0.04);
+  --shadow-cp-md: 0 4px 12px rgba(15, 23, 23, 0.06), 0 0 0 1px rgba(15, 23, 23, 0.04);
+  --shadow-cp-lg: 0 16px 40px rgba(15, 23, 23, 0.08), 0 0 0 1px rgba(15, 23, 23, 0.04);
+
+  /* --- Border radius --- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* --- Globale base-stiler --- */
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-app);
+  color: var(--color-ink-1);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* Tabular-numerals der det gir mening (tall, beløp, datoer, scores). */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fokus-ring som matcher CP-blå */
+:focus-visible {
+  outline: 2px solid var(--color-cp-blue);
+  outline-offset: 2px;
+}
+
+/* Litt finere scrollbar i Webkit-baserte nettlesere */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-1);
+  border-radius: 999px;
+  border: 2px solid var(--color-bg-app);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-5);
 }
