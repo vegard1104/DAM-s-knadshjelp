@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { TextareaFelt } from "./textarea-felt";
 import { TekstFelt } from "./tekst-felt";
 import { TallFelt } from "./tall-felt";
@@ -17,6 +18,7 @@ import type {
   LagreKladdInput,
   LagreKladdResultat,
 } from "@/app/(app)/soknader/ny/ekspress/actions";
+import type { VurderResultat } from "@/app/(app)/soknader/[id]/actions";
 
 /**
  * Hele Ekspress-skjemaet. Setter sammen alle felt-komponentene og
@@ -36,6 +38,7 @@ export function EkspressSkjema({
   initiellAvslutt,
   lagreKladdAction,
   autoFyllAction,
+  vurderAction,
 }: {
   initielleVerdier?: EkspressFelterVerdier;
   initiellSoknadssum?: number | null;
@@ -43,6 +46,7 @@ export function EkspressSkjema({
   initiellAvslutt?: string | null;
   lagreKladdAction: (data: LagreKladdInput) => Promise<LagreKladdResultat>;
   autoFyllAction: (tekst: string) => Promise<AutoFyllResultatRespons>;
+  vurderAction: (soknadId: string) => Promise<VurderResultat>;
 }) {
   const router = useRouter();
   const [verdier, setVerdier] = useState<EkspressFelterVerdier>(
@@ -58,6 +62,8 @@ export function EkspressSkjema({
     initiellAvslutt ?? null,
   );
   const [lagrer, startLagring] = useTransition();
+  const [vurderer, startVurdering] = useTransition();
+  const [vurderingStatus, setVurderingStatus] = useState<string | null>(null);
   const [feilmelding, setFeilmelding] = useState<string | null>(null);
   const [sukkesmelding, setSuksessmelding] = useState<string | null>(null);
 
@@ -120,19 +126,12 @@ export function EkspressSkjema({
     .filter((r) => r.type === "utgift")
     .reduce((sum, r) => sum + (r.belop ?? 0), 0);
 
-  function handleLagreKladd() {
-    setFeilmelding(null);
-    setSuksessmelding(null);
-
+  /** Bygg en LagreKladdInput basert på dagens skjema-state. */
+  function byggLagreInput(): LagreKladdInput | { feil: string } {
     const tittel = (getFelt("prosjektnavn", "") as string).trim();
     if (!tittel) {
-      setFeilmelding("Prosjektnavn må fylles inn før kladd kan lagres.");
-      return;
+      return { feil: "Prosjektnavn må fylles inn først." };
     }
-
-    // Synkroniser de utvalgte filter-feltene
-    settFelt("3.1_oppstart", oppstart);
-    settFelt("3.1_avslutt", avslutt);
 
     const sammenslaatte = {
       ...verdier,
@@ -141,16 +140,28 @@ export function EkspressSkjema({
       soknadssum_kr: soknadssum,
     };
 
-    startLagring(async () => {
-      const resultat = await lagreKladdAction({
-        tittel,
-        felter: sammenslaatte,
-        soknadssum_kr: soknadssum,
-        totalbudsjett_kr: totalbudsjett > 0 ? totalbudsjett : null,
-        oppstart_dato: oppstart,
-        avslutt_dato: avslutt,
-      });
+    return {
+      tittel,
+      felter: sammenslaatte,
+      soknadssum_kr: soknadssum,
+      totalbudsjett_kr: totalbudsjett > 0 ? totalbudsjett : null,
+      oppstart_dato: oppstart,
+      avslutt_dato: avslutt,
+    };
+  }
 
+  function handleLagreKladd() {
+    setFeilmelding(null);
+    setSuksessmelding(null);
+
+    const input = byggLagreInput();
+    if ("feil" in input) {
+      setFeilmelding(input.feil);
+      return;
+    }
+
+    startLagring(async () => {
+      const resultat = await lagreKladdAction(input);
       if (!resultat.ok) {
         setFeilmelding(resultat.feil);
         return;
@@ -158,6 +169,46 @@ export function EkspressSkjema({
 
       setSuksessmelding("Kladden er lagret.");
       router.push(`/soknader/${resultat.soknadId}`);
+    });
+  }
+
+  /**
+   * Lagre + vurder + redirect. Vi gjør det i to API-kall slik at
+   * brukeren ser fremdrift ("Lagrer …" → "Vurderer …") i stedet for
+   * å sitte foran en stille knapp i 15 sekunder.
+   */
+  function handleVurderSoknad() {
+    setFeilmelding(null);
+    setSuksessmelding(null);
+    setVurderingStatus(null);
+
+    const input = byggLagreInput();
+    if ("feil" in input) {
+      setFeilmelding(input.feil);
+      return;
+    }
+
+    startVurdering(async () => {
+      // Steg 1: lagre kladd
+      setVurderingStatus("Lagrer søknaden …");
+      const lagret = await lagreKladdAction(input);
+      if (!lagret.ok) {
+        setFeilmelding(lagret.feil);
+        setVurderingStatus(null);
+        return;
+      }
+
+      // Steg 2: vurder
+      setVurderingStatus("Claude vurderer søknaden — dette kan ta 10–20 sekunder …");
+      const vurdert = await vurderAction(lagret.soknadId);
+      if (!vurdert.ok) {
+        setFeilmelding(vurdert.feil);
+        setVurderingStatus(null);
+        return;
+      }
+
+      // Steg 3: redirect til vurderings-siden
+      router.push(`/soknader/${vurdert.soknadId}/vurdering`);
     });
   }
 
@@ -317,14 +368,19 @@ export function EkspressSkjema({
       {/* Footer med knapper og meldinger */}
       <div className="sticky bottom-4 z-10">
         <div className="rounded-[10px] border border-line-1 bg-bg-card shadow-cp-md p-4 flex items-center justify-between gap-4">
-          <div className="text-[12.5px] text-ink-4">
+          <div className="text-[12.5px] text-ink-4 min-w-0">
             {feilmelding && (
               <span className="text-cp-red font-medium">{feilmelding}</span>
             )}
-            {sukkesmelding && (
+            {!feilmelding && vurderingStatus && (
+              <span className="text-cp-blue font-medium">
+                {vurderingStatus}
+              </span>
+            )}
+            {!feilmelding && !vurderingStatus && sukkesmelding && (
               <span className="text-good font-medium">{sukkesmelding}</span>
             )}
-            {!feilmelding && !sukkesmelding && (
+            {!feilmelding && !vurderingStatus && !sukkesmelding && (
               <span>
                 Endringer lagres ikke automatisk — klikk &laquo;Lagre kladd&raquo;
                 når du vil ta vare på det du har skrevet.
@@ -337,7 +393,7 @@ export function EkspressSkjema({
               type="button"
               variant="secondary"
               size="md"
-              disabled={lagrer}
+              disabled={lagrer || vurderer}
               onClick={handleLagreKladd}
             >
               <Save className="h-4 w-4" />
@@ -347,11 +403,14 @@ export function EkspressSkjema({
               type="button"
               variant="primary"
               size="md"
-              disabled
-              title="Vurdering kommer i neste runde"
+              disabled={lagrer || vurderer}
+              onClick={handleVurderSoknad}
+              title="Lagrer og vurderer søknaden mot DAMs kriterier"
             >
-              <Sparkles className="h-4 w-4" />
-              Vurder søknad
+              <Sparkles
+                className={cn("h-4 w-4", vurderer && "animate-pulse")}
+              />
+              {vurderer ? "Vurderer …" : "Vurder søknad"}
             </Button>
           </div>
         </div>

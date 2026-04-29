@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { EkspressSkjema } from "@/components/soknad/ekspress-skjema";
 import { lagreEkspressKladd, autoFyllEkspressKladd } from "./actions";
+import { vurderSoknadAction } from "../../[id]/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +27,16 @@ export default function NyEkspressSoknadPage() {
           Søknadsskjema
         </h1>
         <p className="text-[13.5px] text-ink-4 mt-1.5 max-w-prose">
-          Strukturen følger Damnett. Du kan lagre kladd når som helst og
-          komme tilbake senere — vi bygger auto-fyll fra limt-inn tekst
-          og Claude-vurdering i neste runde.
+          Strukturen følger Damnett. Lagre kladd når som helst, eller klikk
+          &laquo;Vurder søknad&raquo; for å få Claude til å vurdere mot
+          rubrikken og foreslå forbedringer.
         </p>
       </div>
 
       <EkspressSkjema
         lagreKladdAction={lagreEkspressKladd}
         autoFyllAction={autoFyllEkspressKladd}
+        vurderAction={vurderSoknadAction}
       />
     </div>
   );
