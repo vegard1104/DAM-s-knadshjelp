@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  autoFyllEkspress,
+  type AutoFyllResultat,
+} from "@/lib/claude/ekspress-auto-fyll";
 
 export type LagreKladdInput = {
   tittel: string;
@@ -66,4 +70,61 @@ export async function lagreEkspressKladd(
   revalidatePath("/dashboard");
 
   return { ok: true, soknadId: data.id };
+}
+
+
+// ============================================================
+// Auto-fyll fra fritekst
+// ============================================================
+
+export type AutoFyllResultatRespons =
+  | { ok: true; data: AutoFyllResultat }
+  | { ok: false; feil: string };
+
+const MIN_LENGDE = 30;
+const MAX_LENGDE = 30000;
+
+/**
+ * Kaller Claude API med brukerens limte tekst og returnerer strukturert
+ * JSON som UI-en bruker for å fylle ut skjemaet. Krever innlogget bruker
+ * (men selve dataene er ikke knyttet til bruker — det er kun en
+ * inputtransformering).
+ */
+export async function autoFyllEkspressKladd(
+  fritekst: string,
+): Promise<AutoFyllResultatRespons> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, feil: "Du må være innlogget." };
+  }
+
+  const tekst = fritekst.trim();
+  if (tekst.length < MIN_LENGDE) {
+    return {
+      ok: false,
+      feil: `Teksten er for kort (minst ${MIN_LENGDE} tegn).`,
+    };
+  }
+  if (tekst.length > MAX_LENGDE) {
+    return {
+      ok: false,
+      feil: `Teksten er for lang (maks ${MAX_LENGDE} tegn — ca. ${Math.round(MAX_LENGDE / 1000)} k).`,
+    };
+  }
+
+  try {
+    const data = await autoFyllEkspress(tekst);
+    return { ok: true, data };
+  } catch (error) {
+    console.error("[autoFyllEkspressKladd] Claude-feil:", error);
+    const melding =
+      error instanceof Error ? error.message : "Ukjent feil mot Claude API.";
+    return {
+      ok: false,
+      feil: `Auto-fyll feilet: ${melding}`,
+    };
+  }
 }

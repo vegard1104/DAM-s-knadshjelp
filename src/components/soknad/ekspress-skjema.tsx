@@ -10,7 +10,13 @@ import { TallFelt } from "./tall-felt";
 import { DatoFelt } from "./dato-felt";
 import { ValgFelt } from "./valg-felt";
 import { BudsjettFelt, type Budsjett } from "./budsjett-felt";
+import { AutoFyllPanel } from "./auto-fyll-panel";
 import { EKSPRESS_FELTER } from "@/types/ekspress-felter";
+import type {
+  AutoFyllResultatRespons,
+  LagreKladdInput,
+  LagreKladdResultat,
+} from "@/app/(app)/soknader/ny/ekspress/actions";
 
 /**
  * Hele Ekspress-skjemaet. Setter sammen alle felt-komponentene og
@@ -29,19 +35,14 @@ export function EkspressSkjema({
   initiellOppstart,
   initiellAvslutt,
   lagreKladdAction,
+  autoFyllAction,
 }: {
   initielleVerdier?: EkspressFelterVerdier;
   initiellSoknadssum?: number | null;
   initiellOppstart?: string | null;
   initiellAvslutt?: string | null;
-  lagreKladdAction: (data: {
-    tittel: string;
-    felter: EkspressFelterVerdier;
-    soknadssum_kr: number | null;
-    totalbudsjett_kr: number | null;
-    oppstart_dato: string | null;
-    avslutt_dato: string | null;
-  }) => Promise<{ ok: true; soknadId: string } | { ok: false; feil: string }>;
+  lagreKladdAction: (data: LagreKladdInput) => Promise<LagreKladdResultat>;
+  autoFyllAction: (tekst: string) => Promise<AutoFyllResultatRespons>;
 }) {
   const router = useRouter();
   const [verdier, setVerdier] = useState<EkspressFelterVerdier>(
@@ -60,12 +61,58 @@ export function EkspressSkjema({
   const [feilmelding, setFeilmelding] = useState<string | null>(null);
   const [sukkesmelding, setSuksessmelding] = useState<string | null>(null);
 
+  /** Felt-id-er som agenten ikke kunne fylle ut — markeres med advarsel */
+  const [manglendeFelter, setManglendeFelter] = useState<Set<string>>(
+    new Set(),
+  );
+
   function settFelt(id: string, verdi: unknown) {
     setVerdier((forrige) => ({ ...forrige, [id]: verdi }));
   }
 
   function getFelt<T>(id: string, fallback: T): T {
     return (verdier[id] as T) ?? fallback;
+  }
+
+  /**
+   * Tar imot Claudes auto-fyll-respons og fyller inn skjema-state.
+   * Vi merger inn over eksisterende verdier slik at hvis brukeren har
+   * skrevet noe selv blir det IKKE overskrevet av et tomt agent-svar.
+   */
+  function handleAutoFyllResultat(
+    data: NonNullable<
+      Extract<AutoFyllResultatRespons, { ok: true }>["data"]
+    >,
+  ) {
+    setVerdier((forrige) => {
+      const sammenslaatte: EkspressFelterVerdier = { ...forrige };
+
+      // Sett tittel hvis returnert
+      if (data.tittel) {
+        sammenslaatte["prosjektnavn"] = data.tittel;
+      }
+
+      // Slå sammen felter — kun overskriv hvis agenten har en verdi
+      for (const [id, verdi] of Object.entries(data.felter)) {
+        if (verdi === null || verdi === "" || verdi === undefined) continue;
+        if (Array.isArray(verdi) && verdi.length === 0) continue;
+        sammenslaatte[id] = verdi;
+      }
+
+      // Budsjett: hvis agenten fant rader, bruk dem (overskriver tom rad)
+      if (data.budsjett_rader.length > 0) {
+        sammenslaatte["3.3_budsjett"] = { rader: data.budsjett_rader };
+      }
+
+      return sammenslaatte;
+    });
+
+    // Top-level felt
+    if (data.soknadssum_kr !== null) setSoknadssum(data.soknadssum_kr);
+    if (data.oppstart_dato) setOppstart(data.oppstart_dato);
+    if (data.avslutt_dato) setAvslutt(data.avslutt_dato);
+
+    setManglendeFelter(new Set(data.manglende_felter));
   }
 
   const budsjett = getFelt<Budsjett>("3.3_budsjett", TOM_BUDSJETT);
@@ -124,12 +171,27 @@ export function EkspressSkjema({
 
   return (
     <form
-      className="space-y-8"
+      className="space-y-6"
       onSubmit={(e) => {
         e.preventDefault();
         handleLagreKladd();
       }}
     >
+      {/* Auto-fyll panel øverst */}
+      <AutoFyllPanel
+        autoFyllAction={autoFyllAction}
+        onResultat={handleAutoFyllResultat}
+      />
+
+      {/* Status hvis agenten markerte felt som manglende */}
+      {manglendeFelter.size > 0 && (
+        <div className="rounded-md border border-warning-soft bg-warning-soft/40 px-4 py-3 text-[12.5px] text-ink-2 leading-relaxed">
+          <span className="font-semibold">Auto-fyll fullført.</span>{" "}
+          Agenten kunne ikke fylle ut {manglendeFelter.size} felt — disse
+          er markert med &laquo;Mangler&raquo;-tag og må fylles ut manuelt.
+        </div>
+      )}
+
       {/* Hver seksjon */}
       {Array.from(seksjonsmap.entries()).map(([seksjon, felt]) => (
         <section
@@ -141,11 +203,12 @@ export function EkspressSkjema({
           </h2>
 
           {felt.map((f) => {
+            const erManglende = manglendeFelter.has(f.id);
             // Spesialtilfelle: oppstart/avslutt har egne kolonner
+            let innhold: React.ReactNode = null;
             if (f.id === "3.1_oppstart") {
-              return (
+              innhold = (
                 <DatoFelt
-                  key={f.id}
                   feltId={f.id}
                   navn={f.navn}
                   hjelpetekst={f.hjelpetekst}
@@ -154,11 +217,9 @@ export function EkspressSkjema({
                   onChange={setOppstart}
                 />
               );
-            }
-            if (f.id === "3.1_avslutt") {
-              return (
+            } else if (f.id === "3.1_avslutt") {
+              innhold = (
                 <DatoFelt
-                  key={f.id}
                   feltId={f.id}
                   navn={f.navn}
                   hjelpetekst={f.hjelpetekst}
@@ -168,11 +229,9 @@ export function EkspressSkjema({
                   min={oppstart ?? undefined}
                 />
               );
-            }
-            if (f.id === "3.3_budsjett") {
-              return (
+            } else if (f.id === "3.3_budsjett") {
+              innhold = (
                 <BudsjettFelt
-                  key={f.id}
                   feltId={f.id}
                   hjelpetekst={f.hjelpetekst}
                   budsjett={budsjett}
@@ -181,66 +240,76 @@ export function EkspressSkjema({
                   onSoknadssumChange={setSoknadssum}
                 />
               );
+            } else {
+              switch (f.type) {
+                case "kort_tekst":
+                  innhold = (
+                    <TekstFelt
+                      feltId={f.id === "prosjektnavn" ? "" : f.id}
+                      navn={f.navn}
+                      hjelpetekst={f.hjelpetekst}
+                      tegngrense={f.tegngrense}
+                      pakrevd={f.pakrevd}
+                      verdi={getFelt(f.id, "")}
+                      onChange={(v) => settFelt(f.id, v)}
+                    />
+                  );
+                  break;
+                case "tekst":
+                  innhold = (
+                    <TextareaFelt
+                      feltId={f.id}
+                      navn={f.navn}
+                      hjelpetekst={f.hjelpetekst}
+                      tegngrense={f.tegngrense ?? 1000}
+                      pakrevd={f.pakrevd}
+                      verdi={getFelt(f.id, "")}
+                      onChange={(v) => settFelt(f.id, v)}
+                      rader={f.tegngrense && f.tegngrense > 500 ? 6 : 3}
+                    />
+                  );
+                  break;
+                case "tall":
+                  innhold = (
+                    <TallFelt
+                      feltId={f.id}
+                      navn={f.navn}
+                      hjelpetekst={f.hjelpetekst}
+                      pakrevd={f.pakrevd}
+                      verdi={getFelt(f.id, null)}
+                      onChange={(v) => settFelt(f.id, v)}
+                    />
+                  );
+                  break;
+                case "valg_flere":
+                  innhold = (
+                    <ValgFelt
+                      feltId={f.id}
+                      navn={f.navn}
+                      hjelpetekst={f.hjelpetekst}
+                      pakrevd={f.pakrevd}
+                      valgteKoder={getFelt<string[]>(f.id, [])}
+                      valg={f.valg ?? []}
+                      maksValg={f.maksValg}
+                      onChange={(v) => settFelt(f.id, v)}
+                    />
+                  );
+                  break;
+                default:
+                  innhold = null;
+              }
             }
 
-            // Generisk dispatcher per type
-            switch (f.type) {
-              case "kort_tekst":
-                return (
-                  <TekstFelt
-                    key={f.id}
-                    feltId={f.id === "prosjektnavn" ? "" : f.id}
-                    navn={f.navn}
-                    hjelpetekst={f.hjelpetekst}
-                    tegngrense={f.tegngrense}
-                    pakrevd={f.pakrevd}
-                    verdi={getFelt(f.id, "")}
-                    onChange={(v) => settFelt(f.id, v)}
-                  />
-                );
-              case "tekst":
-                return (
-                  <TextareaFelt
-                    key={f.id}
-                    feltId={f.id}
-                    navn={f.navn}
-                    hjelpetekst={f.hjelpetekst}
-                    tegngrense={f.tegngrense ?? 1000}
-                    pakrevd={f.pakrevd}
-                    verdi={getFelt(f.id, "")}
-                    onChange={(v) => settFelt(f.id, v)}
-                    rader={f.tegngrense && f.tegngrense > 500 ? 6 : 3}
-                  />
-                );
-              case "tall":
-                return (
-                  <TallFelt
-                    key={f.id}
-                    feltId={f.id}
-                    navn={f.navn}
-                    hjelpetekst={f.hjelpetekst}
-                    pakrevd={f.pakrevd}
-                    verdi={getFelt(f.id, null)}
-                    onChange={(v) => settFelt(f.id, v)}
-                  />
-                );
-              case "valg_flere":
-                return (
-                  <ValgFelt
-                    key={f.id}
-                    feltId={f.id}
-                    navn={f.navn}
-                    hjelpetekst={f.hjelpetekst}
-                    pakrevd={f.pakrevd}
-                    valgteKoder={getFelt<string[]>(f.id, [])}
-                    valg={f.valg ?? []}
-                    maksValg={f.maksValg}
-                    onChange={(v) => settFelt(f.id, v)}
-                  />
-                );
-              default:
-                return null;
-            }
+            return (
+              <div key={f.id} className="relative">
+                {erManglende && (
+                  <span className="absolute -top-1 right-0 inline-flex items-center gap-1 rounded-full bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-[0.06em] px-2 py-0.5 z-10">
+                    Mangler
+                  </span>
+                )}
+                {innhold}
+              </div>
+            );
           })}
         </section>
       ))}

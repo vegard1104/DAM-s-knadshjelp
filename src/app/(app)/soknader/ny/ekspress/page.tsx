@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { EkspressSkjema } from "@/components/soknad/ekspress-skjema";
-import { lagreEkspressKladd } from "./actions";
+import { lagreEkspressKladd, autoFyllEkspressKladd } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,10 @@ export default function NyEkspressSoknadPage() {
         </p>
       </div>
 
-      <EkspressSkjema lagreKladdAction={lagreEkspressKladd} />
+      <EkspressSkjema
+        lagreKladdAction={lagreEkspressKladd}
+        autoFyllAction={autoFyllEkspressKladd}
+      />
     </div>
   );
 }
