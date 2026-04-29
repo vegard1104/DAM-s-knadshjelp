@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
+import type { UserRole } from "@/types/database";
 
 // Layoutet leser auth-cookie via Supabase, så det MÅ kjøre per request.
 // Uten dette prøver Next.js å statisk prerendere ruter under build, og da
@@ -21,12 +22,31 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  // Vi henter rolle og fullt navn fra "profiles"-tabellen senere når vi
-  // setter opp Supabase-skjemaet. For nå viser vi e-post som navn.
+  // Hent profil for å få navn og rolle. Hvis profiles-tabellen ikke
+  // eksisterer ennå (før første migrasjon er kjørt), faller vi tilbake
+  // til e-post-baserte default-verdier slik at appen ikke krasjer.
+  let navn = user.email?.split("@")[0] ?? "Bruker";
+  let role: UserRole = "bruker";
+
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("navn, role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile) {
+      navn = profile.navn || navn;
+      role = profile.role as UserRole;
+    }
+  } catch {
+    // Tabellen finnes ikke ennå — bruk default
+  }
+
   const userInfo = {
-    name: user.email?.split("@")[0] ?? "Bruker",
+    name: navn,
     email: user.email ?? "",
-    role: "bruker", // midlertidig — kommer fra profiles-tabellen senere
+    role,
   };
 
   return (
