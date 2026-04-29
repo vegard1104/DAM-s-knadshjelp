@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 
+// Layoutet leser auth-cookie via Supabase, så det MÅ kjøre per request.
+// Uten dette prøver Next.js å statisk prerendere ruter under build, og da
+// feiler det fordi Supabase-env-vars typisk ikke er tilgjengelige der.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
