@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ChevronLeft, ArrowRight, Sparkles, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatusChip } from "@/components/ui/status-chip";
 import { ScoreBar } from "@/components/ui/score-bar";
@@ -68,7 +68,7 @@ export default async function SoknadDetailPage({
         Tilbake til alle søknader
       </Link>
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-4 mb-2">
             {soknad.program}
@@ -77,7 +77,16 @@ export default async function SoknadDetailPage({
             {soknad.tittel || "Uten navn"}
           </h1>
         </div>
-        <StatusChip status={soknad.status} />
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            href={`/soknader/${id}/rediger`}
+            className="inline-flex items-center gap-2 rounded-md border border-line-1 bg-white px-3 py-2 text-[13px] font-medium text-ink-2 hover:bg-bg-sunk transition"
+          >
+            <Pencil className="h-4 w-4" />
+            Rediger
+          </Link>
+          <StatusChip status={soknad.status} />
+        </div>
       </div>
 
       {/* Vurderings-sammendrag (eller "vurder nå"-prompt) */}

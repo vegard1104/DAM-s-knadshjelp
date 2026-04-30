@@ -6,11 +6,13 @@ import {
   CheckCircle2,
   Sparkles,
   Info,
+  Pencil,
+  History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ScoreBar } from "@/components/ui/score-bar";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import type {
   VurderingAnbefaling,
   Forbedring,
@@ -49,13 +51,16 @@ const ANBEFALING_META: Record<
 
 export default async function VurderingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ v?: string }>;
 }) {
   const { id: soknadId } = await params;
+  const { v: valgtVersjonStr } = await searchParams;
   const supabase = await createClient();
 
-  // Hent søknaden + nyeste vurdering
+  // Hent søknaden + alle vurderinger
   const { data: soknad } = await supabase
     .from("soknader")
     .select("id, tittel, program, status, owner_id")
@@ -64,13 +69,18 @@ export default async function VurderingPage({
 
   if (!soknad) notFound();
 
-  const { data: vurdering } = await supabase
+  const { data: alleVurderinger } = await supabase
     .from("vurderinger")
     .select("*")
     .eq("soknad_id", soknadId)
-    .order("versjon", { ascending: false })
-    .limit(1)
-    .single();
+    .order("versjon", { ascending: false });
+
+  // Velg versjon: ?v=N hvis spesifisert, ellers nyeste
+  const valgtVersjon = valgtVersjonStr ? parseInt(valgtVersjonStr, 10) : null;
+  const vurdering =
+    (valgtVersjon !== null
+      ? alleVurderinger?.find((vu) => vu.versjon === valgtVersjon)
+      : alleVurderinger?.[0]) ?? null;
 
   if (!vurdering) {
     return (
@@ -111,18 +121,64 @@ export default async function VurderingPage({
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-4 mb-2">
-            Vurdering · Versjon {vurdering.versjon} ·{" "}
-            {formatDate(vurdering.created_at)}
+            Vurdering v{vurdering.versjon} · {formatDate(vurdering.created_at)}
           </p>
           <h1 className="text-[28px] font-bold tracking-tight text-ink-1">
             {soknad.tittel || "Uten navn"}
           </h1>
         </div>
-        <VurderPaaNyttKnapp soknadId={soknadId} />
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href={`/soknader/${soknadId}/rediger`}
+            className="inline-flex items-center gap-2 rounded-md border border-line-1 bg-white px-3 py-2 text-[13px] font-medium text-ink-2 hover:bg-bg-sunk transition"
+          >
+            <Pencil className="h-4 w-4" />
+            Rediger søknad
+          </Link>
+          <VurderPaaNyttKnapp soknadId={soknadId} />
+        </div>
       </div>
+
+      {/* Versjon-historikk */}
+      {alleVurderinger && alleVurderinger.length > 1 && (
+        <div className="mb-6 rounded-md border border-line-1 bg-bg-card p-3 flex items-center gap-3 overflow-x-auto">
+          <History className="h-4 w-4 text-ink-4 shrink-0" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-4 shrink-0">
+            Versjoner
+          </span>
+          <div className="flex items-center gap-1.5">
+            {alleVurderinger.map((vu) => {
+              const aktiv = vu.versjon === vurdering.versjon;
+              return (
+                <Link
+                  key={vu.id}
+                  href={`/soknader/${soknadId}/vurdering?v=${vu.versjon}`}
+                  className={cn(
+                    "inline-flex items-baseline gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition",
+                    aktiv
+                      ? "bg-cp-blue text-white"
+                      : "border border-line-1 text-ink-2 hover:bg-bg-sunk",
+                  )}
+                  title={`Vurdert ${formatDate(vu.created_at)}`}
+                >
+                  v{vu.versjon}
+                  <span
+                    className={cn(
+                      "tabular text-[11px]",
+                      aktiv ? "text-white/80" : "text-ink-4",
+                    )}
+                  >
+                    {vu.snitt_score?.toFixed(1)}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Anbefaling */}
       <div

@@ -34,7 +34,8 @@ export default function NyEkspressSoknadPage() {
       </div>
 
       <EkspressSkjema
-        lagreKladdAction={lagreEkspressKladd}
+        modus="ny"
+        lagreAction={lagreEkspressKladd}
         autoFyllAction={autoFyllEkspressKladd}
         vurderAction={vurderSoknadAction}
       />

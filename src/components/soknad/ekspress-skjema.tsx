@@ -12,7 +12,9 @@ import { DatoFelt } from "./dato-felt";
 import { ValgFelt } from "./valg-felt";
 import { BudsjettFelt, type Budsjett } from "./budsjett-felt";
 import { AutoFyllPanel } from "./auto-fyll-panel";
+import { ForbedringInline } from "./forbedring-inline";
 import { EKSPRESS_FELTER } from "@/types/ekspress-felter";
+import type { Forbedring } from "@/types/database";
 import type {
   AutoFyllResultatRespons,
   LagreKladdInput,
@@ -36,7 +38,9 @@ export function EkspressSkjema({
   initiellSoknadssum,
   initiellOppstart,
   initiellAvslutt,
-  lagreKladdAction,
+  modus = "ny",
+  forbedringer = [],
+  lagreAction,
   autoFyllAction,
   vurderAction,
 }: {
@@ -44,7 +48,15 @@ export function EkspressSkjema({
   initiellSoknadssum?: number | null;
   initiellOppstart?: string | null;
   initiellAvslutt?: string | null;
-  lagreKladdAction: (data: LagreKladdInput) => Promise<LagreKladdResultat>;
+  /**
+   * "ny" — oppretter en ny søknad ved lagring (returnerer ny ID).
+   * "rediger" — oppdaterer eksisterende søknad. Vurder-knappen blir
+   * "Vurder på nytt" og viser forbedringsforslag inline.
+   */
+  modus?: "ny" | "rediger";
+  /** Forbedringsforslag fra siste vurdering (kun i rediger-modus) */
+  forbedringer?: Forbedring[];
+  lagreAction: (data: LagreKladdInput) => Promise<LagreKladdResultat>;
   autoFyllAction: (tekst: string) => Promise<AutoFyllResultatRespons>;
   vurderAction: (soknadId: string) => Promise<VurderResultat>;
 }) {
@@ -161,14 +173,20 @@ export function EkspressSkjema({
     }
 
     startLagring(async () => {
-      const resultat = await lagreKladdAction(input);
+      const resultat = await lagreAction(input);
       if (!resultat.ok) {
         setFeilmelding(resultat.feil);
         return;
       }
 
-      setSuksessmelding("Kladden er lagret.");
-      router.push(`/soknader/${resultat.soknadId}`);
+      if (modus === "rediger") {
+        // Bli på siden så brukeren kan fortsette å redigere
+        setSuksessmelding("Endringer lagret.");
+        router.refresh();
+      } else {
+        setSuksessmelding("Kladden er lagret.");
+        router.push(`/soknader/${resultat.soknadId}`);
+      }
     });
   }
 
@@ -191,7 +209,7 @@ export function EkspressSkjema({
     startVurdering(async () => {
       // Steg 1: lagre kladd
       setVurderingStatus("Lagrer søknaden …");
-      const lagret = await lagreKladdAction(input);
+      const lagret = await lagreAction(input);
       if (!lagret.ok) {
         setFeilmelding(lagret.feil);
         setVurderingStatus(null);
@@ -351,6 +369,9 @@ export function EkspressSkjema({
               }
             }
 
+            // Finn eventuelt forbedringsforslag for dette feltet (rediger-modus)
+            const forbedring = forbedringer.find((fb) => fb.felt === f.id);
+
             return (
               <div key={f.id} className="relative">
                 {erManglende && (
@@ -359,6 +380,20 @@ export function EkspressSkjema({
                   </span>
                 )}
                 {innhold}
+                {forbedring && f.type === "tekst" && (
+                  <ForbedringInline
+                    forbedring={forbedring}
+                    tegngrense={f.tegngrense}
+                    onBruk={() => settFelt(f.id, forbedring.forslag)}
+                  />
+                )}
+                {forbedring && f.type === "kort_tekst" && (
+                  <ForbedringInline
+                    forbedring={forbedring}
+                    tegngrense={f.tegngrense}
+                    onBruk={() => settFelt(f.id, forbedring.forslag)}
+                  />
+                )}
               </div>
             );
           })}
@@ -397,7 +432,11 @@ export function EkspressSkjema({
               onClick={handleLagreKladd}
             >
               <Save className="h-4 w-4" />
-              {lagrer ? "Lagrer …" : "Lagre kladd"}
+              {lagrer
+                ? "Lagrer …"
+                : modus === "rediger"
+                  ? "Lagre endringer"
+                  : "Lagre kladd"}
             </Button>
             <Button
               type="button"
@@ -410,7 +449,11 @@ export function EkspressSkjema({
               <Sparkles
                 className={cn("h-4 w-4", vurderer && "animate-pulse")}
               />
-              {vurderer ? "Vurderer …" : "Vurder søknad"}
+              {vurderer
+                ? "Vurderer …"
+                : modus === "rediger"
+                  ? "Vurder på nytt"
+                  : "Vurder søknad"}
             </Button>
           </div>
         </div>

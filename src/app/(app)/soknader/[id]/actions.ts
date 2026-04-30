@@ -3,6 +3,72 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { vurderEkspressSoknad } from "@/lib/claude/ekspress-vurdering";
+import type { LagreKladdInput } from "../ny/ekspress/actions";
+
+// ============================================================
+// Oppdater eksisterende søknad
+// ============================================================
+
+export type OppdaterResultat =
+  | { ok: true; soknadId: string }
+  | { ok: false; feil: string };
+
+/**
+ * Oppdaterer en eksisterende søknad. Brukes i søknadsmodus når brukeren
+ * redigerer teksten basert på forbedringsforslag fra agenten.
+ *
+ * RLS sørger for at kun eier (eller admin) kan oppdatere — Supabase
+ * returnerer 0 rader endret hvis en uautorisert bruker prøver, og vi
+ * tolker det som feil.
+ *
+ * Endrer også last_modified_at via trigger, slik at sortering på "sist
+ * endret" oppdateres riktig.
+ */
+export async function oppdaterEkspressSoknad(
+  soknadId: string,
+  input: LagreKladdInput,
+): Promise<OppdaterResultat> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, feil: "Du må være innlogget." };
+  }
+
+  if (!input.tittel || input.tittel.trim().length === 0) {
+    return { ok: false, feil: "Prosjektnavn må fylles inn." };
+  }
+
+  const { data, error } = await supabase
+    .from("soknader")
+    .update({
+      tittel: input.tittel.trim(),
+      felter: input.felter,
+      soknadssum_kr: input.soknadssum_kr,
+      totalbudsjett_kr: input.totalbudsjett_kr,
+      oppstart_dato: input.oppstart_dato,
+      avslutt_dato: input.avslutt_dato,
+    })
+    .eq("id", soknadId)
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return {
+      ok: false,
+      feil: error?.message ?? "Fant ikke søknaden eller har ikke tilgang.",
+    };
+  }
+
+  revalidatePath(`/soknader/${soknadId}`);
+  revalidatePath(`/soknader/${soknadId}/rediger`);
+  revalidatePath(`/soknader/${soknadId}/vurdering`);
+  revalidatePath("/soknader");
+  revalidatePath("/dashboard");
+
+  return { ok: true, soknadId: data.id };
+}
 
 export type VurderResultat =
   | { ok: true; vurderingId: string; soknadId: string }
