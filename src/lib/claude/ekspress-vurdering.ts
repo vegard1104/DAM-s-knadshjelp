@@ -1,8 +1,4 @@
 import { getClaudeClient, getModel } from "./client";
-import {
-  EKSPRESS_SYSTEM_PROMPT,
-  EKSPRESS_SYSTEM_PROMPT_VERSJON,
-} from "@/prompts/ekspress-system-prompt";
 import type {
   Forbedring,
   RodtFlagg,
@@ -38,7 +34,14 @@ export type VurderingResultat = {
   kommentar_til_bruker: string;
   modell_brukt: string;
   system_prompt_versjon: string;
+  rubrikk_versjon: string;
   ra_response: unknown;
+};
+
+/** Aktive agent-prompts hentet fra databasen (eller kode-fallback). */
+export type AktivePromptsForVurdering = {
+  system: { versjon: string; innhold: string };
+  rubrikk: { versjon: string; innhold: string };
 };
 
 /** Inputformat for vurderingen — alt agenten trenger om søknaden. */
@@ -271,9 +274,14 @@ function bruker_meldingForSoknad(input: VurderingInput): string {
 
 export async function vurderEkspressSoknad(
   input: VurderingInput,
+  prompts: AktivePromptsForVurdering,
 ): Promise<VurderingResultat> {
   const client = getClaudeClient();
   const modell = getModel();
+
+  // System-prompten består av to deler: agentens "personlighet" + rubrikken.
+  // Vi setter dem sammen som ett system-felt med felles cache-grense.
+  const sammensatt = `${prompts.system.innhold}\n\n${prompts.rubrikk.innhold}`;
 
   const response = await client.messages.create({
     model: modell,
@@ -283,7 +291,7 @@ export async function vurderEkspressSoknad(
     system: [
       {
         type: "text",
-        text: EKSPRESS_SYSTEM_PROMPT,
+        text: sammensatt,
         cache_control: { type: "ephemeral" },
       },
     ],
@@ -324,7 +332,8 @@ export async function vurderEkspressSoknad(
     forbedringer: (args.forbedringer as Forbedring[]) ?? [],
     kommentar_til_bruker: (args.kommentar_til_bruker as string) ?? "",
     modell_brukt: modell,
-    system_prompt_versjon: EKSPRESS_SYSTEM_PROMPT_VERSJON,
+    system_prompt_versjon: prompts.system.versjon,
+    rubrikk_versjon: prompts.rubrikk.versjon,
     ra_response: response.content,
   };
 }

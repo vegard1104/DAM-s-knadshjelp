@@ -20,6 +20,8 @@ import type {
 } from "@/types/database";
 import { finnFelt } from "@/types/ekspress-felter";
 import { VurderPaaNyttKnapp } from "./vurder-paa-nytt-knapp";
+import { FeedbackPanel } from "@/components/soknad/feedback-panel";
+import type { Feedback } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +111,21 @@ export default async function VurderingPage({
 
   const forbedringer = (vurdering.forbedringer ?? []) as Forbedring[];
   const rodeFlagg = (vurdering.rode_flagg ?? []) as RodtFlagg[];
+
+  // Hent eventuell feedback fra innlogget bruker for denne vurderingen
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: feedbackRader } = user
+    ? await supabase
+        .from("feedback")
+        .select("*")
+        .eq("vurdering_id", vurdering.id)
+        .eq("bruker_id", user.id)
+        .in("type", ["tommel_opp", "tommel_ned"])
+    : { data: null };
+  const minFeedback =
+    (feedbackRader?.[0] as Feedback | undefined) ?? null;
 
   return (
     <div className="px-10 py-10 max-w-[860px]">
@@ -299,14 +316,20 @@ export default async function VurderingPage({
 
       {/* Note fra agenten */}
       {extractNote(vurdering.begrunnelse) && (
-        <div className="rounded-md border border-line-1 bg-bg-sunk px-4 py-3 text-[12px] text-ink-3 leading-relaxed italic">
+        <div className="rounded-md border border-line-1 bg-bg-sunk px-4 py-3 text-[12px] text-ink-3 leading-relaxed italic mb-6">
           {extractNote(vurdering.begrunnelse)}
         </div>
       )}
 
+      {/* Feedback-panel */}
+      <FeedbackPanel
+        vurderingId={vurdering.id}
+        eksisterendeFeedback={minFeedback}
+      />
+
       <p className="mt-6 text-[11px] text-ink-5 text-center">
-        Modell: {vurdering.modell_brukt} · Prompt-versjon:{" "}
-        {vurdering.system_prompt_versjon}
+        Modell: {vurdering.modell_brukt} · System: {vurdering.system_prompt_versjon}
+        {vurdering.rubrikk_versjon && ` · Rubrikk: ${vurdering.rubrikk_versjon}`}
       </p>
     </div>
   );

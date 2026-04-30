@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { vurderEkspressSoknad } from "@/lib/claude/ekspress-vurdering";
+import { hentAktivePrompts } from "@/lib/claude/agent-prompts";
 import type { LagreKladdInput } from "../ny/ekspress/actions";
 
 // ============================================================
@@ -116,17 +117,23 @@ export async function vurderSoknadAction(
     };
   }
 
-  // 2. Kall Claude
+  // 2. Hent aktive prompts (fra DB; bootstrap fra kode hvis tom)
+  const prompts = await hentAktivePrompts("ekspress");
+
+  // 3. Kall Claude med de aktive promptene
   let resultat;
   try {
-    resultat = await vurderEkspressSoknad({
-      tittel: soknad.tittel,
-      felter: soknad.felter as Record<string, unknown>,
-      soknadssum_kr: soknad.soknadssum_kr,
-      totalbudsjett_kr: soknad.totalbudsjett_kr,
-      oppstart_dato: soknad.oppstart_dato,
-      avslutt_dato: soknad.avslutt_dato,
-    });
+    resultat = await vurderEkspressSoknad(
+      {
+        tittel: soknad.tittel,
+        felter: soknad.felter as Record<string, unknown>,
+        soknadssum_kr: soknad.soknadssum_kr,
+        totalbudsjett_kr: soknad.totalbudsjett_kr,
+        oppstart_dato: soknad.oppstart_dato,
+        avslutt_dato: soknad.avslutt_dato,
+      },
+      prompts,
+    );
   } catch (error) {
     console.error("[vurderSoknadAction] Claude-feil:", error);
     const melding =
@@ -134,7 +141,7 @@ export async function vurderSoknadAction(
     return { ok: false, feil: `Vurdering feilet: ${melding}` };
   }
 
-  // 3. Finn neste versjon (1 hvis ingen tidligere, eller maks+1)
+  // 4. Finn neste versjon (1 hvis ingen tidligere, eller maks+1)
   const { data: tidligere } = await supabase
     .from("vurderinger")
     .select("versjon")
@@ -144,7 +151,7 @@ export async function vurderSoknadAction(
 
   const nesteVersjon = (tidligere?.[0]?.versjon ?? 0) + 1;
 
-  // 4. Lagre vurderingen
+  // 5. Lagre vurderingen — inkludert hvilke prompt-versjoner som ble brukt
   const { data: vurdering, error: vurderingFeil } = await supabase
     .from("vurderinger")
     .insert({
@@ -160,6 +167,7 @@ export async function vurderSoknadAction(
       rode_flagg: resultat.rode_flagg,
       modell_brukt: resultat.modell_brukt,
       system_prompt_versjon: resultat.system_prompt_versjon,
+      rubrikk_versjon: resultat.rubrikk_versjon,
       ra_response: resultat.ra_response,
     })
     .select("id")

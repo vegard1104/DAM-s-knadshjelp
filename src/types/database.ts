@@ -94,8 +94,25 @@ export type Vurdering = {
   rode_flagg: RodtFlagg[];
   modell_brukt: string | null;
   system_prompt_versjon: string | null;
+  rubrikk_versjon: string | null;
   ra_response: unknown;
   created_at: string;
+};
+
+/** Type på agent-prompt-rad. */
+export type AgentPromptType = "system_prompt" | "rubrikk";
+
+export type AgentPrompt = {
+  id: string;
+  program: Program;
+  type: AgentPromptType;
+  versjon: string;
+  innhold: string;
+  aktiv: boolean;
+  endret_av: string | null;
+  endret_at: string;
+  endrings_grunnlag: string | null;
+  forrige_versjon_id: string | null;
 };
 
 export type DamSvar = {
@@ -116,7 +133,14 @@ export type Feedback = {
   type: FeedbackType;
   kommentar: string | null;
   behandlet_av_agent: boolean;
+  /** Claudes tolkning av brukerens kommentar (dobbeltsjekk-regelen) */
+  agent_tolkning: string | null;
+  /** Eventuelt oppklarende spørsmål fra Claude */
+  agent_oppfolging: string | null;
+  /** Har brukeren bekreftet at agenten forstod riktig? */
+  bruker_bekreftet: boolean;
   created_at: string;
+  oppdatert_at: string;
 };
 
 export type RubrikkEndringslogg = {
