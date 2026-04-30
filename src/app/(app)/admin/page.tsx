@@ -151,7 +151,7 @@ export default async function AdminPage() {
         <SammendragKort
           tittel="Nye fra brukere"
           antall={
-            fraBrukere.filter((f) => f.admin_status === "ny").length
+            fraBrukere.filter((f) => (f.admin_status ?? "ny") === "ny").length
           }
           ikon={ThumbsUp}
           aksent="cp-blue"
@@ -159,7 +159,7 @@ export default async function AdminPage() {
         <SammendragKort
           tittel="Nye fra trenere"
           antall={
-            fraTrenere.filter((f) => f.admin_status === "ny").length
+            fraTrenere.filter((f) => (f.admin_status ?? "ny") === "ny").length
           }
           ikon={Pencil}
           aksent="cp-blue"
@@ -294,7 +294,10 @@ function FeedbackKort({
   feedback: FeedbackMedKontekst;
   kilde: "bruker" | "trener";
 }) {
-  const status = STATUS_META[feedback.admin_status];
+  // Defensiv: hvis admin_status mangler (f.eks. før migrasjon er kjørt),
+  // fall tilbake til "ny" så siden ikke krasjer.
+  const aktivStatus = feedback.admin_status ?? "ny";
+  const status = STATUS_META[aktivStatus] ?? STATUS_META.ny;
   const StatusIkon = status.ikon;
 
   return (
@@ -410,8 +413,8 @@ function FeedbackKort({
         {/* Admin-handlinger */}
         <AdminFeedbackHandlinger
           feedbackId={feedback.id}
-          naverende={feedback.admin_status}
-          notat={feedback.admin_notat}
+          naverende={aktivStatus}
+          notat={feedback.admin_notat ?? null}
         />
       </div>
     </Card>
