@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ArrowRight, Sparkles, Pencil } from "lucide-react";
+import { ChevronLeft, ArrowRight, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatusChip } from "@/components/ui/status-chip";
 import { ScoreBar } from "@/components/ui/score-bar";
@@ -8,8 +8,10 @@ import { Avatar, nameToInitials } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { EKSPRESS_FELTER } from "@/types/ekspress-felter";
-import type { VurderingAnbefaling } from "@/types/database";
+import type { VurderingAnbefaling, DamSvar } from "@/types/database";
 import { VurderPaaNyttKnapp } from "./vurdering/vurder-paa-nytt-knapp";
+import { DamSvarPanel } from "@/components/soknad/dam-svar-panel";
+import { getPdfSignedUrl } from "./dam-svar-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,31 @@ export default async function SoknadDetailPage({
     .order("versjon", { ascending: false })
     .limit(1)
     .single();
+
+  // Hent DAM-svar hvis det finnes
+  const { data: damSvar } = await supabase
+    .from("dam_svar")
+    .select("*")
+    .eq("soknad_id", id)
+    .single();
+
+  // Generer signed URL for PDF hvis svaret har en
+  const pdfSignedUrl =
+    damSvar?.pdf_path != null ? await getPdfSignedUrl(damSvar.pdf_path) : null;
+
+  // Sjekk om innlogget bruker kan redigere (eier eller admin)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profil } = user
+    ? await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+  const kanRedigere =
+    !!user && (soknad.owner_id === user.id || profil?.role === "admin");
 
   // Sortér felt etter Damnett-rekkefølge for visning
   const felter = soknad.felter as Record<string, unknown>;
@@ -141,6 +168,17 @@ export default async function SoknadDetailPage({
           </div>
         </Card>
       )}
+
+      {/* DAM-svar / etter innsending */}
+      <div className="mb-6">
+        <DamSvarPanel
+          soknadId={id}
+          soknadStatus={soknad.status}
+          damSvar={damSvar as DamSvar | null}
+          pdfSignedUrl={pdfSignedUrl}
+          kanRedigere={kanRedigere}
+        />
+      </div>
 
       {/* Metadata */}
       <Card className="mb-6">
