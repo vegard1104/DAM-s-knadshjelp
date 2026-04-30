@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tolkFeedback } from "@/lib/claude/feedback-tolkning";
-import type { Feedback, FeedbackType, Vurdering } from "@/types/database";
+import type {
+  Feedback,
+  FeedbackAdminStatus,
+  FeedbackType,
+  Vurdering,
+} from "@/types/database";
 
 // ============================================================
 // Lagre feedback + (hvis kommentar finnes) la Claude tolke den
@@ -199,4 +204,158 @@ export async function bekreftTolkningAction(
   }
 
   return { ok: true, feedback: data as Feedback };
+}
+
+// ============================================================
+// Trener-modus: seksjons-spesifikk feedback (admin/utvikler)
+// Hopper over dobbeltsjekk-regelen — admin er antatt å være konkret.
+// ============================================================
+
+export type SeksjonFeedbackInput = {
+  vurderingId: string;
+  targetSection: string;
+  type: "tommel_opp" | "tommel_ned";
+  kommentar: string | null;
+  foreslattOmskrivning: string | null;
+};
+
+export type SeksjonFeedbackResultat =
+  | { ok: true; feedback: Feedback }
+  | { ok: false; feil: string };
+
+export async function lagreSeksjonFeedbackAction(
+  input: SeksjonFeedbackInput,
+): Promise<SeksjonFeedbackResultat> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, feil: "Du må være innlogget." };
+
+  // Sjekk rolle — kun admin/utvikler
+  const { data: profil } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profil || (profil.role !== "admin" && profil.role !== "utvikler")) {
+    return {
+      ok: false,
+      feil: "Kun admin og utvikler kan gi seksjons-spesifikk tilbakemelding.",
+    };
+  }
+
+  // Må ha noen substans
+  if (
+    !input.kommentar?.trim() &&
+    !input.foreslattOmskrivning?.trim()
+  ) {
+    return {
+      ok: false,
+      feil: "Skriv en kommentar eller en foreslått omskrivning før du sender.",
+    };
+  }
+
+  // Upsert basert på (vurdering_id, bruker_id, target_section)
+  const { data, error } = await supabase
+    .from("feedback")
+    .upsert(
+      {
+        vurdering_id: input.vurderingId,
+        bruker_id: user.id,
+        type: input.type,
+        target_section: input.targetSection,
+        kommentar: input.kommentar?.trim() || null,
+        foreslatt_omskrivning: input.foreslattOmskrivning?.trim() || null,
+        // Hopp over dobbeltsjekk for trener-feedback — det er allerede konkret
+        bruker_bekreftet: true,
+        agent_tolkning: null,
+        agent_oppfolging: null,
+        admin_status: "ny",
+        oppdatert_at: new Date().toISOString(),
+      },
+      { onConflict: "vurdering_id,bruker_id,target_section" },
+    )
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    return {
+      ok: false,
+      feil: error?.message ?? "Kunne ikke lagre tilbakemelding.",
+    };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/soknader");
+
+  return { ok: true, feedback: data as Feedback };
+}
+
+export async function slettSeksjonFeedbackAction(
+  feedbackId: string,
+): Promise<{ ok: true } | { ok: false; feil: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, feil: "Du må være innlogget." };
+
+  const { error } = await supabase
+    .from("feedback")
+    .delete()
+    .eq("id", feedbackId)
+    .eq("bruker_id", user.id);
+
+  if (error) return { ok: false, feil: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/soknader");
+  return { ok: true };
+}
+
+// ============================================================
+// Admin: oppdater status på en feedback (behandle køen)
+// ============================================================
+
+export type OppdaterFeedbackStatusInput = {
+  feedbackId: string;
+  nyStatus: FeedbackAdminStatus;
+  notat?: string;
+};
+
+export async function oppdaterFeedbackStatusAction(
+  input: OppdaterFeedbackStatusInput,
+): Promise<{ ok: true } | { ok: false; feil: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, feil: "Du må være innlogget." };
+
+  const { data: profil } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profil || (profil.role !== "admin" && profil.role !== "utvikler")) {
+    return { ok: false, feil: "Kun admin og utvikler kan endre status." };
+  }
+
+  const { error } = await supabase
+    .from("feedback")
+    .update({
+      admin_status: input.nyStatus,
+      admin_notat: input.notat ?? null,
+      behandlet_av: user.id,
+      behandlet_at: new Date().toISOString(),
+    })
+    .eq("id", input.feedbackId);
+
+  if (error) return { ok: false, feil: error.message };
+
+  revalidatePath("/admin");
+  return { ok: true };
 }

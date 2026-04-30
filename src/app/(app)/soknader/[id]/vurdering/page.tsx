@@ -21,6 +21,7 @@ import type {
 import { finnFelt } from "@/types/ekspress-felter";
 import { VurderPaaNyttKnapp } from "./vurder-paa-nytt-knapp";
 import { FeedbackPanel } from "@/components/soknad/feedback-panel";
+import { SeksjonFeedback } from "@/components/soknad/seksjon-feedback";
 import type { Feedback } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -112,20 +113,37 @@ export default async function VurderingPage({
   const forbedringer = (vurdering.forbedringer ?? []) as Forbedring[];
   const rodeFlagg = (vurdering.rode_flagg ?? []) as RodtFlagg[];
 
-  // Hent eventuell feedback fra innlogget bruker for denne vurderingen
+  // Hent eventuell feedback fra innlogget bruker + sjekk rolle
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: feedbackRader } = user
+
+  const { data: profil } = user
+    ? await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+  const kanSpisse = profil?.role === "admin" || profil?.role === "utvikler";
+
+  const { data: alleFeedback } = user
     ? await supabase
         .from("feedback")
         .select("*")
         .eq("vurdering_id", vurdering.id)
         .eq("bruker_id", user.id)
-        .in("type", ["tommel_opp", "tommel_ned"])
     : { data: null };
-  const minFeedback =
-    (feedbackRader?.[0] as Feedback | undefined) ?? null;
+
+  const feedbackPerSeksjon = new Map<string, Feedback>();
+  let minGenerellFeedback: Feedback | null = null;
+  for (const f of (alleFeedback ?? []) as Feedback[]) {
+    if (f.target_section) {
+      feedbackPerSeksjon.set(f.target_section, f);
+    } else if (f.type === "tommel_opp" || f.type === "tommel_ned") {
+      minGenerellFeedback = f;
+    }
+  }
 
   return (
     <div className="px-10 py-10 max-w-[860px]">
@@ -222,6 +240,14 @@ export default async function VurderingPage({
           )}
         </div>
       </div>
+      <SeksjonFeedback
+        vurderingId={vurdering.id}
+        seksjonId="anbefaling"
+        seksjonNavn="Samlet anbefaling og begrunnelse"
+        visForslagsFelt
+        eksisterende={feedbackPerSeksjon.get("anbefaling")}
+        synlig={kanSpisse}
+      />
 
       {/* Røde flagg */}
       {rodeFlagg.length > 0 && (
@@ -253,6 +279,15 @@ export default async function VurderingPage({
               </li>
             ))}
           </ul>
+          <div className="px-5 pb-4">
+            <SeksjonFeedback
+              vurderingId={vurdering.id}
+              seksjonId="rode_flagg"
+              seksjonNavn="Røde flagg"
+              eksisterende={feedbackPerSeksjon.get("rode_flagg")}
+              synlig={kanSpisse}
+            />
+          </div>
         </Card>
       )}
 
@@ -269,12 +304,20 @@ export default async function VurderingPage({
             beskrivelse="Kvalitet på aktiviteter og metoder. Ambisjon og nytenkning."
             score={vurdering.score_soliditet}
             begrunnelse={extractKriterium(vurdering.begrunnelse, "soliditet")}
+            seksjonId="kriterium_soliditet"
+            vurderingId={vurdering.id}
+            kanSpisse={kanSpisse}
+            eksisterende={feedbackPerSeksjon.get("kriterium_soliditet")}
           />
           <KriteriumRad
             navn="Virkning"
             beskrivelse="Potensiell virkning, nytteverdi og spredning."
             score={vurdering.score_virkning}
             begrunnelse={extractKriterium(vurdering.begrunnelse, "virkning")}
+            seksjonId="kriterium_virkning"
+            vurderingId={vurdering.id}
+            kanSpisse={kanSpisse}
+            eksisterende={feedbackPerSeksjon.get("kriterium_virkning")}
           />
           <KriteriumRad
             navn="Gjennomføring"
@@ -284,6 +327,10 @@ export default async function VurderingPage({
               vurdering.begrunnelse,
               "gjennomforing",
             )}
+            seksjonId="kriterium_gjennomforing"
+            vurderingId={vurdering.id}
+            kanSpisse={kanSpisse}
+            eksisterende={feedbackPerSeksjon.get("kriterium_gjennomforing")}
           />
           <KriteriumRad
             navn="Stiftelsen Dams prioriteringer"
@@ -293,6 +340,10 @@ export default async function VurderingPage({
               vurdering.begrunnelse,
               "prioriteringer",
             )}
+            seksjonId="kriterium_prioriteringer"
+            vurderingId={vurdering.id}
+            kanSpisse={kanSpisse}
+            eksisterende={feedbackPerSeksjon.get("kriterium_prioriteringer")}
           />
         </div>
       </Card>
@@ -307,9 +358,19 @@ export default async function VurderingPage({
             </h3>
           </div>
           <div className="divide-y divide-line-2">
-            {forbedringer.map((f, idx) => (
-              <ForbedringRad key={idx} forbedring={f} />
-            ))}
+            {forbedringer.map((f, idx) => {
+              const seksjonId = `forbedring:${f.felt}`;
+              return (
+                <ForbedringRad
+                  key={idx}
+                  forbedring={f}
+                  seksjonId={seksjonId}
+                  vurderingId={vurdering.id}
+                  kanSpisse={kanSpisse}
+                  eksisterende={feedbackPerSeksjon.get(seksjonId)}
+                />
+              );
+            })}
           </div>
         </Card>
       )}
@@ -321,10 +382,10 @@ export default async function VurderingPage({
         </div>
       )}
 
-      {/* Feedback-panel */}
+      {/* Feedback-panel — generell tommel/kommentar med dobbeltsjekk */}
       <FeedbackPanel
         vurderingId={vurdering.id}
-        eksisterendeFeedback={minFeedback}
+        eksisterendeFeedback={minGenerellFeedback}
       />
 
       <p className="mt-6 text-[11px] text-ink-5 text-center">
@@ -340,11 +401,19 @@ function KriteriumRad({
   beskrivelse,
   score,
   begrunnelse,
+  seksjonId,
+  vurderingId,
+  kanSpisse,
+  eksisterende,
 }: {
   navn: string;
   beskrivelse: string;
   score: number | null;
   begrunnelse: { styrker?: string; svakheter?: string } | null;
+  seksjonId: string;
+  vurderingId: string;
+  kanSpisse: boolean;
+  eksisterende?: Feedback;
 }) {
   return (
     <div className="px-5 py-4">
@@ -371,11 +440,31 @@ function KriteriumRad({
           )}
         </div>
       )}
+      <SeksjonFeedback
+        vurderingId={vurderingId}
+        seksjonId={seksjonId}
+        seksjonNavn={`${navn} — score og begrunnelse`}
+        visForslagsFelt
+        eksisterende={eksisterende}
+        synlig={kanSpisse}
+      />
     </div>
   );
 }
 
-function ForbedringRad({ forbedring }: { forbedring: Forbedring }) {
+function ForbedringRad({
+  forbedring,
+  seksjonId,
+  vurderingId,
+  kanSpisse,
+  eksisterende,
+}: {
+  forbedring: Forbedring;
+  seksjonId: string;
+  vurderingId: string;
+  kanSpisse: boolean;
+  eksisterende?: Feedback;
+}) {
   const felt = finnFelt(forbedring.felt);
   return (
     <div className="px-5 py-4 space-y-3">
@@ -416,6 +505,15 @@ function ForbedringRad({ forbedring }: { forbedring: Forbedring }) {
         <span className="font-semibold not-italic">Hvorfor: </span>
         {forbedring.hvorfor}
       </div>
+
+      <SeksjonFeedback
+        vurderingId={vurderingId}
+        seksjonId={seksjonId}
+        seksjonNavn={`Forbedringsforslag for ${forbedring.felt}`}
+        visForslagsFelt
+        eksisterende={eksisterende}
+        synlig={kanSpisse}
+      />
     </div>
   );
 }

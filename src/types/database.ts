@@ -126,6 +126,12 @@ export type DamSvar = {
   created_at: string;
 };
 
+export type FeedbackAdminStatus =
+  | "ny"
+  | "behandlet"
+  | "implementert"
+  | "avvist";
+
 export type Feedback = {
   id: string;
   vurdering_id: string;
@@ -139,6 +145,19 @@ export type Feedback = {
   agent_oppfolging: string | null;
   /** Har brukeren bekreftet at agenten forstod riktig? */
   bruker_bekreftet: boolean;
+  /**
+   * Hvilken seksjon av vurderingen dette gjelder. NULL for generell
+   * feedback. Eksempler: "kriterium_soliditet", "rode_flagg",
+   * "forbedring:1.1.2", "anbefaling", "note".
+   */
+  target_section: string | null;
+  /** Trenerens foreslåtte omskrivning av denne seksjonen */
+  foreslatt_omskrivning: string | null;
+  /** Status i admin-køen */
+  admin_status: FeedbackAdminStatus;
+  admin_notat: string | null;
+  behandlet_av: string | null;
+  behandlet_at: string | null;
   created_at: string;
   oppdatert_at: string;
 };
