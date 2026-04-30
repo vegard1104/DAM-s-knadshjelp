@@ -110,8 +110,14 @@ export default async function VurderingPage({
   const meta = ANBEFALING_META[vurdering.anbefaling as VurderingAnbefaling];
   const AnbefalingIkon = meta.ikon;
 
-  const forbedringer = (vurdering.forbedringer ?? []) as Forbedring[];
-  const rodeFlagg = (vurdering.rode_flagg ?? []) as RodtFlagg[];
+  // Defensiv Array.isArray — hvis JSONB-feltet skulle være feil format
+  // krasjer vi ikke hele siden.
+  const forbedringer: Forbedring[] = Array.isArray(vurdering.forbedringer)
+    ? (vurdering.forbedringer as Forbedring[])
+    : [];
+  const rodeFlagg: RodtFlagg[] = Array.isArray(vurdering.rode_flagg)
+    ? (vurdering.rode_flagg as RodtFlagg[])
+    : [];
 
   // Hent eventuell feedback fra innlogget bruker + sjekk rolle
   const {

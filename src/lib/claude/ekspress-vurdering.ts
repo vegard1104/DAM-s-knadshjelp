@@ -44,6 +44,19 @@ export type AktivePromptsForVurdering = {
   rubrikk: { versjon: string; innhold: string };
 };
 
+/**
+ * Normaliser en verdi til et array. Claude bør returnere arrays for
+ * forbedringer og rode_flagg, men vi vil ikke krasje hvis modellen
+ * en sjelden gang gir oss et enkeltobjekt eller null.
+ */
+function normaliserTilArray<T>(verdi: unknown): T[] {
+  if (verdi === null || verdi === undefined) return [];
+  if (Array.isArray(verdi)) return verdi as T[];
+  // Single object — pakk det inn i array
+  if (typeof verdi === "object") return [verdi as T];
+  return [];
+}
+
 /** Inputformat for vurderingen — alt agenten trenger om søknaden. */
 export type VurderingInput = {
   tittel: string;
@@ -328,8 +341,11 @@ export async function vurderEkspressSoknad(
         gjennomforing: { styrker: "", svakheter: "" },
         prioriteringer: { styrker: "", svakheter: "" },
       },
-    rode_flagg: (args.rode_flagg as RodtFlagg[]) ?? [],
-    forbedringer: (args.forbedringer as Forbedring[]) ?? [],
+    // Vi tvinger arrays — hvis Claude returnerer noe annet (f.eks. et
+    // enkeltobjekt istedet for en array med ett objekt), pakker vi det
+    // inn slik at databasen alltid får et array.
+    rode_flagg: normaliserTilArray<RodtFlagg>(args.rode_flagg),
+    forbedringer: normaliserTilArray<Forbedring>(args.forbedringer),
     kommentar_til_bruker: (args.kommentar_til_bruker as string) ?? "",
     modell_brukt: modell,
     system_prompt_versjon: prompts.system.versjon,

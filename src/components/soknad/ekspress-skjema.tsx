@@ -370,7 +370,11 @@ export function EkspressSkjema({
             }
 
             // Finn eventuelt forbedringsforslag for dette feltet (rediger-modus)
-            const forbedring = forbedringer.find((fb) => fb.felt === f.id);
+            // Defensiv Array.isArray-sjekk: hvis prop kom som null eller noe
+            // annet enn array, hopper vi over .find i stedet for å krasje.
+            const forbedring = Array.isArray(forbedringer)
+              ? forbedringer.find((fb) => fb?.felt === f.id)
+              : undefined;
 
             return (
               <div key={f.id} className="relative">

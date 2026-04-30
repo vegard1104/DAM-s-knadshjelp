@@ -85,7 +85,13 @@ export default async function RedigerSoknadPage({
     .limit(1)
     .single();
 
-  const forbedringer = (vurdering?.forbedringer ?? []) as Forbedring[];
+  // Defensiv: vurdering.forbedringer skal være array, men hvis noe har gått
+  // galt med JSONB-parsingen eller agenten returnerte feil format, kommer
+  // vi ikke til å krasje siden.
+  const forbedringerRaw = vurdering?.forbedringer;
+  const forbedringer: Forbedring[] = Array.isArray(forbedringerRaw)
+    ? (forbedringerRaw as Forbedring[])
+    : [];
 
   // Server Action wrapper som binder soknadId til oppdaterAction.
   // Må kjøres som "use server" for å passe med form-komponentens signatur.
