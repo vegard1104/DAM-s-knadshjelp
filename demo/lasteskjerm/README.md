@@ -15,20 +15,22 @@ Laget for å vises mens appen starter, så den har få elementer og få farger:
 
 - Bakgrunnen er appens egen (lys `#F2F2F7`, mørk `#0E0F13`), så overgangen
   til appen er sømløs.
-- Utøveren er et piktogram i appens hovedfarge. Armen og beinet bak er en
-  blekere variant av samme farge. Kvinner har hestehale; ellers er det ingen
-  drakter, hudfarger eller hodeplagg.
+- Utøveren er et piktogram i idrettens farge fra appen, og bytter farge når
+  idretten bytter: løping oransje, sykling blå, langrenn lilla, svømming
+  turkis. Roing (grønn), skøyter (isblå) og rullestolløp (rosa) låner farger
+  fra samme familie. Armen og beinet bak er en blekere variant av samme
+  farge. Kvinner har hestehale; ellers er det ingen drakter, hudfarger eller
+  hodeplagg.
 - Utstyr (sykkel, ski, staver, båt, rullestol) er i en nøytral grå.
 - Landemerket er én blek silhuett. Buer, urskive og vinduer er skåret ut av
   flaten i stedet for å tegnes i en ny farge.
 - Bakken er en tynn linje med korte streker som glir forbi. For svømming og
   roing er den en bølgelinje, og det som er under vannflaten tones ut.
 - Under bakken står idretten, stedet («Eiffeltårnet, Paris») og en tynn
-  fremdriftslinje. Nederst står «AI Trener».
+  fremdriftslinje i appens hovedfarge. Nederst står «AI Trener».
 
 Styrelinja øverst er bare for forhåndsvisningen: bytt mellom lys og mørk
-drakt, velg en av appens seks hovedfarger, og trykk «Appen er klar» for å se
-uttoningen.
+drakt, og trykk «Appen er klar» for å se uttoningen.
 
 Rekkefølgen er den samme som før: først byttes idretten, 1,5 sekunder senere
 stedet, og så står kombinasjonen i 3,2 sekunder før neste idrett. Idretter:
@@ -49,8 +51,9 @@ opptatt med å starte appen. Nettlesere uten det tegner på hovedtråden.
   og føtter på pedaler, staver og årer.
 - `LM`: landemerkene, tegnet i én farge og mellomlagret som bilder.
 - `PLACES`: landemerke, navn og by per sted.
-- `settPalett()`: alle fargene utledes av tre verdier fra appen: bakgrunn,
-  tekstfarge og hovedfarge.
+- `settPalett()`: fargene kommer fra appen: bakgrunn og tekstfarge fra
+  drakten, utøveren fra idrettsfargene (`--run`, `--bike` … i appens
+  `styles.css`, med faste reserveverdier). Resten er blandinger av dem.
 - `st.actToPlace` og `st.placeToAct` styrer tidene mellom byttene.
 
 `window.ATLasteskjerm` har `vis()` og `ferdig()`. Appen kaller `ferdig()` når

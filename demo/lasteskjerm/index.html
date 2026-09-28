@@ -21,7 +21,7 @@
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-ui); overflow: hidden; }
 
   .styr {
-    position: fixed; z-index: 2147483001; left: 50%; transform: translateX(-50%);
+    position: fixed; z-index: 2147483001; left: 0; right: 0; margin-inline: auto; width: max-content;
     top: calc(env(safe-area-inset-top, 0px) + 12px);
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px;
     max-width: calc(100% - 32px); padding: 6px 8px; border-radius: 20px;
@@ -35,12 +35,6 @@
     padding: 6px 11px; border-radius: 999px; cursor: pointer;
   }
   .seg button[aria-pressed="true"] { color: var(--fg); background: var(--kant); }
-  .prikker { display: flex; gap: 6px; padding-inline: 2px; }
-  .prikker button {
-    width: 20px; height: 20px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
-    background: var(--c); box-shadow: 0 0 0 2px var(--bg);
-  }
-  .prikker button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--c); }
   .klar { color: var(--fg); background: var(--kant); }
   button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 
@@ -135,7 +129,6 @@
     <button type="button" id="tema-lys" data-tema="light">Lys</button>
     <button type="button" id="tema-mork" data-tema="dark">Mørk</button>
   </div>
-  <div class="prikker" role="group" aria-label="Hovedfarge"></div>
   <button type="button" class="klar" id="klar">Appen er klar</button>
 </div>
 <main class="appen">
@@ -159,9 +152,10 @@ try {
    kombinasjonen i 3,2 s før neste idrett.
 
    Stil (Vegard 28.09: «forenkle … trenger ikke så mye detaljer og
-   farger»): appens egen bakgrunn, utøveren som piktogram i appens
-   hovedfarge, landemerket som én blek silhuett og en tynn bakkelinje.
-   Ingen himmel, sol, skyer, rekvisitter eller startnummer.
+   farger»): appens egen bakgrunn, utøveren som piktogram i idrettens
+   farge fra appen (bytter når idretten bytter), landemerket som én blek
+   silhuett og en tynn bakkelinje. Ingen himmel, sol, skyer, rekvisitter
+   eller startnummer.
 
    Hvorfor egen tråd: Babel kompilerer de 36 JSX-filene på hovedtråden
    ved hver oppstart. Målt 28.09: 7,4 s til «app-oppe», hvorav 6,5 s var
@@ -227,16 +221,21 @@ function lasteskjermMotor(vert) {
     return al === undefined || al >= 1 ? `rgb(${r},${gg},${b})` : `rgba(${r},${gg},${b},${Math.max(0, al).toFixed(3)})`;
   }
 
-  // Alle fargene i scenen kommer fra appens drakt: bakgrunn, tekst og
-  // hovedfarge. Resten er blandinger av dem.
+  // Alle fargene i scenen kommer fra appen: bakgrunn og tekst fra drakten,
+  // utøveren fra idrettsfargene. Resten er blandinger av dem.
   let P = null;
   function settPalett(p) {
     p = p || {};
     const bg = p.bg || '#F2F2F7', ink = p.ink || '#000000', ak = p.aksent || '#5E5CE6', mork = !!p.mork;
+    // Kroppen i idrettens farge: nær side i full farge, armen og beinet bak
+    // blandet halvveis mot bakgrunnen.
+    const kropp = c => ({ naer: css(c), fjern: css(mix(c, bg, .5)) });
+    const idrett = {};
+    for (const k in (p.idrett || {})) idrett[k] = kropp(p.idrett[k]);
     P = {
       bg: css(bg),
-      naer: css(ak),                                    // kroppen, nær side
-      fjern: css(mix(ak, bg, .5)),                      // armen og beinet bak
+      idrett,
+      reserve: kropp(ak),                               // idrett uten egen farge
       utstyr: css(mix(bg, ink, mork ? .52 : .45)),      // sykkel, ski, båt …
       utstyrFjern: css(mix(bg, ink, mork ? .3 : .25)),
       lm: css(mix(bg, ink, mork ? .1 : .075)),          // landemerket
@@ -289,10 +288,11 @@ function lasteskjermMotor(vert) {
   function ut(fn, a = 1) { g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = a; fn(); g.restore(); }
 
   /* ================================================================
-     KROPP – piktogram i én farge. Enheter: ca. 100 = en person.
-     y = 0 er bakken.
+     KROPP – piktogram i idrettens farge. Enheter: ca. 100 = en person.
+     y = 0 er bakken. K settes per utøver før den tegnes.
      ================================================================ */
-  const farge = far => far ? P.fjern : P.naer;
+  let K = null;
+  const farge = far => far ? K.fjern : K.naer;
 
   function drawLeg(hip, knee, foot, far, o = {}) {
     const c = farge(far);
@@ -316,21 +316,21 @@ function lasteskjermMotor(vert) {
     dot(hand, 3.3, c);
   }
   function drawTorso(hip, neck, A) {
-    seg(hip, neck, A.gender === 'f' ? 12.2 : 13.4, P.naer);
+    seg(hip, neck, A.gender === 'f' ? 12.2 : 13.4, K.naer);
   }
   function drawHead(neck, hc, A, o = {}) {
     const r = A.gender === 'f' ? 6.9 : 7.3;
-    seg(neck, along(neck, hc, .6), 5.2, P.naer);
+    seg(neck, along(neck, hc, .6), 5.2, K.naer);
     g.save(); g.translate(hc[0], hc[1]); if (o.rot) g.rotate(o.rot);
     // hestehale – det eneste som skiller kvinne og mann
     if (A.gender === 'f' && !o.badehette) {
       const s = o.sway || 0;
-      g.strokeStyle = P.naer; g.lineWidth = 4.4;
+      g.strokeStyle = K.naer; g.lineWidth = 4.4;
       g.beginPath(); g.moveTo(-r * .6, -r * .5);
       g.quadraticCurveTo(-r - 4.5, -r * .75 + s * 1.2, -r - 9, 1.2 + s * 3.4); g.stroke();
       g.lineWidth = 2.6; g.beginPath(); g.moveTo(-r - 6.5, -1.2 + s * 2.3); g.lineTo(-r - 11, 3.6 + s * 4.2); g.stroke();
     }
-    dot([0, 0], r, P.naer);
+    dot([0, 0], r, K.naer);
     g.restore();
   }
   function wheel(c, R, rot, col) {
@@ -894,7 +894,7 @@ function lasteskjermMotor(vert) {
 
   function makeAthlete(entry, round) {
     const gender = entry.fixed || round % 2 === 0 ? entry.gender : (entry.gender === 'm' ? 'f' : 'm');
-    return { sp: SPORTS[entry.sport], gender, t: Math.random() * 2, dist: 0 };
+    return { sp: SPORTS[entry.sport], key: entry.sport, gender, t: Math.random() * 2, dist: 0 };
   }
 
   function layout(w, h, dpr) {
@@ -973,6 +973,7 @@ function lasteskjermMotor(vert) {
     x.setTransform(DPR * U, 0, 0, DPR * U, DPR * U * AX, DPR * U * AY);
     x.lineCap = 'round'; x.lineJoin = 'round';
     g = x;
+    K = P.idrett[A.key] || P.reserve;
     A.sp.draw(A);
   }
   function drawAthlete(A, L, alpha, dxU) {
@@ -1116,6 +1117,16 @@ function lasteskjermMotor(vert) {
     oransje: ['#B85A10', '#FF9F45'], rod: ['#C0224A', '#FF5C86'], grafitt: ['#2C2E36', '#D5D8DF'],
   };
 
+  // Utøveren har idrettens farge fra appen (styles.css, samme verdi i begge
+  // drakter). Roing, skøyter og rullestolløp har ingen egen idrett i appen og
+  // låner en farge fra samme familie som ikke ligger ved siden av i rekka.
+  // Verdiene etter variabelnavnet er reserve hvis stilarket ikke er lastet.
+  const IDRETTSFARGER = {
+    run: ['--run', '#DC6E41'], bike: ['--bike', '#5992E7'], ski: ['--xc', '#9680DF'],
+    swim: ['--swim', '#1AA69F'], row: ['--walk', '#71A342'], skate: ['--alpine', '#1AA1C9'],
+    wheel: ['--str', '#C86EB0'],
+  };
+
   const les = (lager, k) => { try { return lager.getItem(k); } catch (e) { return null; } };
   const skriv = (lager, k, v) => { try { lager.setItem(k, v); } catch (e) { /* privat modus o.l. */ } };
   const fjern = (lager, k) => { try { lager.removeItem(k); } catch (e) { /* ignoreres */ } };
@@ -1128,9 +1139,16 @@ function lasteskjermMotor(vert) {
     const mork = valgt === 'dark' || (valgt !== 'light' &&
       !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
     const a = AKSENTER[les(localStorage, K_AKSENT)] || AKSENTER.lilla;
+    const stil = getComputedStyle(document.documentElement);
+    const idrett = {};
+    for (const k in IDRETTSFARGER) {
+      const [navn, reserve] = IDRETTSFARGER[k];
+      const v = stil.getPropertyValue(navn).trim();
+      idrett[k] = /^#[0-9a-f]{6}$/i.test(v) ? v : reserve;
+    }
     return mork
-      ? { mork: true, bg: '#0E0F13', ink: '#F4F5F7', aksent: a[1] }
-      : { mork: false, bg: '#F2F2F7', ink: '#000000', aksent: a[0] };
+      ? { mork: true, bg: '#0E0F13', ink: '#F4F5F7', aksent: a[1], idrett }
+      : { mork: false, bg: '#F2F2F7', ink: '#000000', aksent: a[0], idrett };
   }
 
   let aktiv = null;   // { el, motor, worker, ro, startet, ferdig }
@@ -1300,10 +1318,6 @@ function lasteskjermMotor(vert) {
 </script>
 <script>
 (function () {
-  const AKSENTER = [
-    ['lilla', 'Lilla', '#5E5CE6', '#7D7AFF'], ['blaa', 'Blå', '#0A66D0', '#4C9AFF'], ['gronn', 'Grønn', '#1F7A47', '#3DCE7A'],
-    ['oransje', 'Oransje', '#B85A10', '#FF9F45'], ['rod', 'Rød', '#C0224A', '#FF5C86'], ['grafitt', 'Grafitt', '#2C2E36', '#D5D8DF'],
-  ];
   const root = document.documentElement;
   const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const skriv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignoreres */ } };
@@ -1311,21 +1325,11 @@ function lasteskjermMotor(vert) {
     const t = root.getAttribute('data-theme');
     return t ? t === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   };
-  const prikker = document.querySelector('.prikker');
   const klar = document.getElementById('klar');
 
   function tegnStyr() {
-    const m = mork(), valgt = les('at-aksent') || 'lilla';
+    const m = mork();
     document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tema === 'dark') === m)));
-    prikker.innerHTML = '';
-    for (const [k, navn, lys, mrk] of AKSENTER) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.id = 'aksent-' + k; b.title = navn; b.setAttribute('aria-label', navn);
-      b.setAttribute('aria-pressed', String(k === valgt));
-      b.style.setProperty('--c', m ? mrk : lys);
-      b.addEventListener('click', () => { skriv('at-aksent', k); tegnStyr(); startPaNytt(); });
-      prikker.appendChild(b);
-    }
     klar.textContent = document.querySelector('.ls') ? 'Appen er klar' : 'Start på nytt';
   }
 
