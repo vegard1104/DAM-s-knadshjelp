@@ -1139,7 +1139,8 @@ const st = {
   ai: 0, pi: 0, round: 0, count: 0,
   cur: null, prev: null, actK: 1,
   place: 0, placePrev: -1, placeK: 1, placeAge: 0, prevAge: 0,
-  timer: 0, interval: 3.2, nextKind: 'act',
+  // Stedet byttes kort tid etter idretten, så får kombinasjonen stå litt før neste idrett.
+  timer: 0, actToPlace: 1.5, placeToAct: 3.2, nextKind: 'act',
   paused: false, tempo: 1, t: 0, scroll: 0, speed: 1,
   amb: [[255, 255, 255], 0], cloudX: 0,
   prog: 0, progHold: 0, msg: -1, pct: -1,
@@ -1452,7 +1453,7 @@ const MSGS = ['Laster inn økten din', 'Henter pulssonene dine', 'Synkroniserer 
 function update(dt, rawDt) {
   st.t += dt;
   st.timer += dt;
-  if (st.timer >= st.interval) {
+  if (st.timer >= (st.nextKind === 'place' ? st.actToPlace : st.placeToAct)) {
     st.timer = 0;
     if (st.nextKind === 'act') { nextActivity(); st.nextKind = 'place'; } else { nextPlace(); st.nextKind = 'act'; }
   }

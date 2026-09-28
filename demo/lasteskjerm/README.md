@@ -12,8 +12,8 @@ avhengigheter. Du tester den ved å åpne filen i en nettleser.
   Big Ben, Frihetsgudinnen, Kristus-statuen, Fuji, Colosseum, pyramidene i Giza,
   Operahuset i Sydney, Bryggen, Golden Gate, Taj Mahal, Det skjeve tårnet i
   Pisa, Ishavskatedralen (med nordlys), Burj Khalifa og Den kinesiske mur.
-- Hvert 3,2. sekund skjer ett bytte. Først byttes aktiviteten, så bakgrunnen,
-  så aktiviteten igjen, og slik fortsetter det.
+- Først byttes aktiviteten. 1,5 sekunder senere byttes bakgrunnen, og så får
+  kombinasjonen stå i 3,2 sekunder før neste aktivitet. Slik fortsetter det.
 - Når aktiviteten byttes, ser det ut som en stafettveksling: den gamle utøveren
   drar ifra, og den nye kommer inn bakfra. Underlaget skifter samtidig mellom
   vei, snø, vann, is og friidrettsbane.
@@ -43,7 +43,8 @@ Alt tegnes i ett `<canvas>`:
 - `LM`: landemerkene. De tegnes med enkle former og mellomlagres som bilder.
 - `PLACES`: himmelfarger, sol/måne, bakgrunnsterreng, lys og tekst per sted.
 - `ACTS`: rekkefølgen på aktivitetene.
-- `st.interval` styrer hvor lenge det går mellom hvert bytte.
+- `st.actToPlace` styrer tiden fra aktivitetsbytte til stedsbytte, og
+  `st.placeToAct` tiden fra stedsbytte til neste aktivitet.
 
 Har brukeren slått på `prefers-reduced-motion`, går animasjonen saktere, og
 figurene glir ikke inn og ut ved bytte.
