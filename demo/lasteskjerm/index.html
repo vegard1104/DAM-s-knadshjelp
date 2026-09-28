@@ -3,1618 +3,1359 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Animert lasteskjerm: utøvere i ulike idretter foran kjente landemerker.">
 <title>Verdensløpet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
 <style>
+  /* Forhåndsvisning: lasteskjermen fyller siden; en liten styrelinje ligger over den. */
   :root {
-    color-scheme: dark;
-    --night: #0D1424;
-    --glass: rgba(11, 17, 31, .58);
-    --glass-hover: rgba(24, 33, 56, .78);
-    --line: rgba(255, 255, 255, .16);
-    --text: #F5F7FB;
-    --muted: rgba(233, 239, 248, .78);
-    --faint: rgba(233, 239, 248, .56);
-    --bib: #FBFAF5;
-    --bib-ink: #141925;
-    --bib-sub: #6A7282;
-    --pin: #A7AFBC;
-    --accent: #FFB23E;
-    --display: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
-    --body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg: #F2F2F7; --fg: #000000; --fg2: #606066; --flate: rgba(255, 255, 255, .78); --kant: rgba(0, 0, 0, .08);
+    --f-ui: -apple-system, 'SF Pro Text', 'Instrument Sans', system-ui, sans-serif;
   }
-  html { height: 100%; box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  body {
-    height: 100%; margin: 0; overflow: hidden;
-    background: var(--night); color: var(--text);
-    font-family: var(--body); -webkit-font-smoothing: antialiased;
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0E0F13; --fg: #F4F5F7; --fg2: #9BA2AE; --flate: rgba(29, 32, 39, .82); --kant: rgba(255, 255, 255, .1); color-scheme: dark; }
   }
-  .stage { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--night); }
-  #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  :root[data-theme="dark"] { --bg: #0E0F13; --fg: #F4F5F7; --fg2: #9BA2AE; --flate: rgba(29, 32, 39, .82); --kant: rgba(255, 255, 255, .1); color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-ui); overflow: hidden; }
 
-  .top {
-    position: absolute; inset: 0 0 auto 0;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 12px 16px; pointer-events: none;
+  .styr {
+    position: fixed; z-index: 2147483001; left: 50%; transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px;
+    max-width: calc(100% - 32px); padding: 6px 8px; border-radius: 20px;
+    background: var(--flate); border: 1px solid var(--kant);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    font-size: 13px;
   }
-  .brand {
-    flex: none;
-    display: inline-flex; align-items: center; gap: 8px;
-    font: 700 15px/1 var(--display); letter-spacing: .16em; text-transform: uppercase;
-    padding: 8px 13px 8px 10px; border-radius: 999px;
-    background: var(--glass); border: 1px solid var(--line);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  .seg { display: flex; gap: 2px; }
+  .seg button, .klar {
+    font: inherit; font-weight: 600; color: var(--fg2); background: none; border: 0;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer;
   }
-  .brand svg { width: 16px; height: 16px; flex: none; }
-  .controls { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; pointer-events: auto; }
-  .btn {
-    appearance: none; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 12px; border-radius: 999px;
-    background: var(--glass); border: 1px solid var(--line); color: var(--text);
-    font: 600 13px/1 var(--body);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    transition: background .15s ease;
+  .seg button[aria-pressed="true"] { color: var(--fg); background: var(--kant); }
+  .prikker { display: flex; gap: 6px; padding-inline: 2px; }
+  .prikker button {
+    width: 20px; height: 20px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: var(--c); box-shadow: 0 0 0 2px var(--bg);
   }
-  .btn:hover { background: var(--glass-hover); }
-  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .btn svg { width: 14px; height: 14px; flex: none; }
-  .btn .tempo { font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: center; }
+  .prikker button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--c); }
+  .klar { color: var(--fg); background: var(--kant); }
+  button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 
-  .hud {
-    position: absolute; left: 16px; right: 16px; bottom: 16px;
-    margin-inline: auto; max-width: 440px;
-    display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px 14px;
-    padding: 14px 16px 15px; border-radius: 18px;
-    background: var(--glass); border: 1px solid var(--line);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 10px 30px rgba(4, 8, 18, .28);
+  .appen {
+    height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px;
+    padding-inline: 16px; text-align: center;
   }
-  .bib {
-    position: relative; width: 66px; padding: 9px 0 6px; border-radius: 6px;
-    display: grid; justify-items: center; gap: 3px;
-    background: var(--bib); color: var(--bib-ink);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .22);
-    transform: rotate(-2deg);
-  }
-  .bib::before, .bib::after {
-    content: ""; position: absolute; top: 4px; width: 4px; height: 4px; border-radius: 50%; background: var(--pin);
-  }
-  .bib::before { left: 5px; }
-  .bib::after { right: 5px; }
-  .bib-no { font: 700 30px/.9 var(--display); font-variant-numeric: tabular-nums; }
-  .bib-sub { font: 600 9px/1 var(--display); letter-spacing: .18em; text-transform: uppercase; color: var(--bib-sub); }
-  .info { min-width: 0; display: grid; gap: 3px; }
-  .sport { font: 700 26px/1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
-  .place { font: 500 15px/1.25 var(--body); color: var(--muted); }
-  .coord { font: 500 12.5px/1.3 var(--body); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .swap { display: inline-block; }
-  .nw { white-space: nowrap; }
-  .swap.in { animation: rise .55s cubic-bezier(.2, .8, .2, 1); }
-  @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
-
-  .load { grid-column: 1 / -1; display: grid; gap: 8px; }
-  .load-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 500 13px/1.2 var(--body); color: var(--muted); }
-  .pct { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
-  .bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .15); overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); }
-
-  @media (max-width: 520px) {
-    .btn .lbl { display: none; }
-    .btn { padding: 9px; }
-    .sport { font-size: 23px; }
-  }
-  @media (max-height: 460px) {
-    .hud { padding: 10px 14px 11px; gap: 8px 12px; }
-    .bib { width: 56px; padding: 7px 0 5px; }
-    .bib-no { font-size: 25px; }
-    .sport { font-size: 21px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .swap.in { animation: none; }
-  }
+  .appen h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  .appen p { margin: 0; color: var(--fg2); max-width: 32ch; line-height: 1.45; }
 </style>
+<style>
+/* =============================================================
+   Lasteskjermen «Verdensløpet» — lag og tekst.
+   Scenen tegnes av lasteskjerm.js. Alt som skal bevege seg mens
+   hovedtråden er opptatt (fremdriftslinja, tekstbyttene, uttoningen)
+   er CSS-animasjoner på transform/opacity, så nettleseren kan kjøre dem
+   uten hovedtråden.
+   Fargene settes av lasteskjerm.js (--ls-bg, --ls-ink, --ls-aksent) ut
+   fra drakten og hovedfargen brukeren har valgt i appen. De styres ikke
+   av styles.css, fordi mer.jsx ikke har satt data-theme ennå når
+   lasteskjermen vises.
+   ============================================================= */
+.ls {
+  --ls-bg: #F2F2F7;
+  --ls-ink: #000000;
+  --ls-aksent: #5E5CE6;
+  --ls-ink2: color-mix(in srgb, var(--ls-ink) 55%, var(--ls-bg));
+  --ls-ink3: color-mix(in srgb, var(--ls-ink) 42%, var(--ls-bg));
+  position: fixed; inset: 0; z-index: 2147483000;
+  overflow: hidden;
+  background: var(--ls-bg);
+  color: var(--ls-ink);
+  font-family: var(--f-ui, -apple-system, 'Instrument Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none; user-select: none;
+  touch-action: none;
+  transition: opacity .48s ease;
+}
+.ls--ut { opacity: 0; pointer-events: none; }
+.ls-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* Teksten står rett under bakkelinja, som ligger på 60 % av høyden
+   (BAKKE i lasteskjerm.js – endres de, må begge endres). */
+.ls-tekst {
+  position: absolute; left: 16px; right: 16px; top: 60%;
+  margin-top: 30px;
+  display: grid; justify-items: center; gap: 3px;
+  text-align: center;
+}
+.ls-idrett { font-size: 17px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; }
+.ls-sted { font-size: 13px; line-height: 1.3; font-weight: 500; color: var(--ls-ink2); }
+.ls-bytt { display: inline-block; }
+.ls-bytt.inn { animation: ls-inn .5s cubic-bezier(.2, .8, .2, 1); }
+@keyframes ls-inn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* Fremdrift. Linja fyller seg mot 92 % på forrige oppstartstid (--ls-tid);
+   når appen er klar tones en full linje inn over den. */
+.ls-bar {
+  position: relative; width: 112px; height: 3px; margin-top: 14px;
+  border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--ls-ink) 10%, transparent);
+}
+.ls-bar i, .ls-bar b {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: var(--ls-aksent);
+  transform-origin: left center;
+}
+.ls-bar i { transform: scaleX(0); animation: ls-fram var(--ls-tid, 7s) cubic-bezier(.25, .7, .3, 1) forwards; }
+.ls-bar b { opacity: 0; transition: opacity .2s ease; }
+.ls--ferdig .ls-bar b { opacity: 1; }
+@keyframes ls-fram { to { transform: scaleX(.92); } }
+
+.ls-merke {
+  position: absolute; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  display: flex; justify-content: center; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ls-ink3);
+}
+.ls-merke svg { width: 13px; height: 13px; fill: var(--ls-aksent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-bytt.inn { animation: none; }
+}
+
+</style>
+
 </head>
 <body>
-<div class="stage" id="stage">
-  <canvas id="scene" role="img" aria-label="Animert lasteskjerm"></canvas>
-
-  <div class="top">
-    <span class="brand">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.5 3.9 5.5 3.9 9s-1.3 6.5-3.9 9M12 3C9.4 5.5 8.1 8.5 8.1 12s1.3 6.5 3.9 9"/></svg>
-      Verdensløpet
-    </span>
-    <div class="controls" role="toolbar" aria-label="Testkontroller">
-      <button class="btn" id="btnPause" type="button" aria-pressed="false" title="Pause (mellomrom)">
-        <svg id="icoPause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>
-        <svg id="icoPlay" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.2-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8Z"/></svg>
-        <span class="lbl" id="lblPause">Pause</span>
-      </button>
-      <button class="btn" id="btnAct" type="button" title="Ny aktivitet (A)" aria-label="Ny aktivitet">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2"/><path d="m8 21 3.5-6 3 2.5V22M6 12l3-4h5l2.5 3.5L20 12M11.5 8 9.5 14"/></svg>
-        <span class="lbl">Ny aktivitet</span>
-      </button>
-      <button class="btn" id="btnPlace" type="button" title="Nytt sted (S)" aria-label="Nytt sted">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></svg>
-        <span class="lbl">Nytt sted</span>
-      </button>
-      <button class="btn" id="btnTempo" type="button" title="Tempo (T)" aria-label="Tempo 1×">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4.5 16a7.5 7.5 0 1 1 15 0"/><path d="m12 16 3.5-4.5"/></svg>
-        <span class="tempo" id="lblTempo">1×</span>
-      </button>
-    </div>
+<div class="styr" role="toolbar" aria-label="Forhåndsvisning">
+  <div class="seg" role="group" aria-label="Drakt">
+    <button type="button" id="tema-lys" data-tema="light">Lys</button>
+    <button type="button" id="tema-mork" data-tema="dark">Mørk</button>
   </div>
-
-  <div class="hud">
-    <div class="bib" aria-hidden="true"><span class="bib-no" id="bibNo">214</span><span class="bib-sub">Startnr.</span></div>
-    <div class="info">
-      <div class="sport"><span class="swap" id="sport">Løping</span></div>
-      <div class="place"><span class="swap" id="city">Oslo, Norge</span></div>
-      <div class="coord"><span class="swap" id="coord">Holmenkollbakken · <span class="nw">59,964° N 10,668° Ø</span></span></div>
-    </div>
-    <div class="load">
-      <div class="load-row"><span id="msg" aria-live="polite">Laster inn økten din</span><span class="pct" id="pct">0 %</span></div>
-      <div class="bar" aria-hidden="true"><i id="fill"></i></div>
-    </div>
-  </div>
+  <div class="prikker" role="group" aria-label="Hovedfarge"></div>
+  <button type="button" class="klar" id="klar">Appen er klar</button>
 </div>
+<main class="appen">
+  <h1>Appen er oppe</h1>
+  <p>Lasteskjermen toner seg ut idet appen er klar. Trykk «Start på nytt» for å se den igjen.</p>
+</main>
 
 <script>
-(() => {
-'use strict';
+/* Forhåndsvisningen starter alltid på første idrett og sted, og med en
+   oppstartstid på 7 s for fremdriftslinja. */
+try {
+  localStorage.removeItem('at-lasteskjerm');
+  localStorage.setItem('at-oppstart-ms', '7000');
+} catch (e) { /* uten lager vises standardvalgene */ }
+</script>
+<script>
+/* =============================================================
+   AI Trener — lasteskjermen «Verdensløpet»
+   Vises mens appen starter: en utøver i aktivitet foran et kjent
+   landemerke. Idretten byttes, 1,5 s etter byttes stedet, og så står
+   kombinasjonen i 3,2 s før neste idrett.
 
-/* ================================================================
-   Verdensløpet – animert lasteskjerm
-   Utøvere i ulike idretter foran kjente landemerker. Aktivitet og
-   bakgrunn byttes annenhver gang. Alt tegnes prosedyrisk i canvas.
-   ================================================================ */
+   Stil (Vegard 28.09: «forenkle … trenger ikke så mye detaljer og
+   farger»): appens egen bakgrunn, utøveren som piktogram i appens
+   hovedfarge, landemerket som én blek silhuett og en tynn bakkelinje.
+   Ingen himmel, sol, skyer, rekvisitter eller startnummer.
 
-const TAU = Math.PI * 2, D2R = Math.PI / 180;
-const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-const lerp = (a, b, k) => a + (b - a) * k;
-const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
-const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-const easeOut = t => 1 - Math.pow(1 - t, 3);
-const easeIn = t => t * t * t;
-const fract = x => x - Math.floor(x);
-const hash = n => fract(Math.sin(n * 127.1 + 311.7) * 43758.5453);
-const rnd = (a, b) => a + Math.random() * (b - a);
+   Hvorfor egen tråd: Babel kompilerer de 36 JSX-filene på hovedtråden
+   ved hver oppstart. Målt 28.09: 7,4 s til «app-oppe», hvorav 6,5 s var
+   lange oppgaver (lengste 0,66 s). En animasjon på hovedtråden ville stått
+   stille nesten hele tiden den skulle vises. Scenen tegnes derfor i en
+   Web Worker på et OffscreenCanvas. Nettlesere uten det tegner på
+   hovedtråden i stedet (hakker under kompileringen, men virker).
 
-/* ---------- farger ---------- */
-const _hx = new Map();
-function hx(c) {
-  if (typeof c !== 'string') return c;
-  let v = _hx.get(c);
-  if (!v) {
+   Livsløp:
+   · lastes synkront først i <body>, før skallet, så skallet aldri blinker
+   · app.jsx kaller ATLasteskjerm.ferdig() idet appen monterer
+   · har appen ligget i bakgrunnen i 30 min eller mer, lastes den på nytt
+     når du kommer tilbake, og lasteskjermen vises mens den starter
+   · tilstanden (neste idrett og sted) huskes i localStorage, så hver
+     oppstart fortsetter der forrige slapp
+
+   Ren JS, ikke JSX: fila må kjøre før Babel er lastet.
+   ============================================================= */
+
+/* ---------- Scenemotoren ----------------------------------------
+   Kjører enten i en Web Worker (vert = null) eller på hovedtråden
+   (vert = { post, lerret }). Den kjenner ikke DOM-en: den får et lerret,
+   en størrelse og fargene, og sender tekst til hovedtråden med meldinger.
+   Funksjonen gjøres om til tekst og startes som worker, så den kan ikke
+   bruke noe utenfor seg selv. */
+function lasteskjermMotor(vert) {
+  'use strict';
+  const iWorker = !vert;
+  if (iWorker) {
+    vert = {
+      post: m => self.postMessage(m),
+      lerret: (w, h) => new OffscreenCanvas(w, h),
+    };
+  }
+  const raf = typeof self.requestAnimationFrame === 'function'
+    ? f => self.requestAnimationFrame(f)
+    : f => setTimeout(() => f(performance.now()), 16);
+  const caf = typeof self.cancelAnimationFrame === 'function'
+    ? id => self.cancelAnimationFrame(id)
+    : id => clearTimeout(id);
+
+  const TAU = Math.PI * 2, D2R = Math.PI / 180;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const easeIn = t => t * t * t;
+  const fract = x => x - Math.floor(x);
+
+  /* ---------- farger ---------- */
+  function hx(c) {
+    if (typeof c !== 'string') return c;
     let s = c.slice(1);
     if (s.length === 3) s = s.replace(/./g, '$&$&');
     const n = parseInt(s, 16);
-    v = [n >> 16 & 255, n >> 8 & 255, n & 255];
-    _hx.set(c, v);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
   }
-  return v;
-}
-function mix(a, b, k) { a = hx(a); b = hx(b); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
-function css(c, al) {
-  c = hx(c);
-  const r = Math.round(c[0]), gg = Math.round(c[1]), b = Math.round(c[2]);
-  return al === undefined || al >= 1 ? `rgb(${r},${gg},${b})` : `rgba(${r},${gg},${b},${Math.max(0, al).toFixed(3)})`;
-}
-const col = c => (typeof c === 'string' && c[0] !== '#') ? c : css(c);
-const darken = (c, k) => mix(c, [10, 14, 26], k);
-const lighten = (c, k) => mix(c, [255, 255, 255], k);
-
-/* ---------- vektorer ---------- */
-const add = (p, v, L = 1) => [p[0] + v[0] * L, p[1] + v[1] * L];
-const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
-const norm = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
-const along = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
-const dn = deg => { const r = deg * D2R; return [Math.sin(r), Math.cos(r)]; };   // 0 = rett ned, + = framover
-const up = deg => { const r = deg * D2R; return [Math.sin(r), -Math.cos(r)]; };  // 0 = rett opp, + = framover
-const limb = (p, deg, L) => add(p, dn(deg), L);
-// To-ledds invers kinematikk. Returnerer [midtledd, endepunkt].
-function ik(a, b, L1, L2, bend) {
-  const dx = b[0] - a[0], dy = b[1] - a[1];
-  const d0 = Math.hypot(dx, dy) || 1e-3;
-  const d = clamp(d0, Math.abs(L1 - L2) + .5, L1 + L2 - .05);
-  const base = Math.atan2(dy, dx);
-  const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
-  return [
-    [a[0] + Math.cos(base + bend * A) * L1, a[1] + Math.sin(base + bend * A) * L1],
-    [a[0] + dx / d0 * d, a[1] + dy / d0 * d]
-  ];
-}
-
-/* ---------- tegneprimitiver (g = aktiv kontekst) ---------- */
-let g = null;
-function seg(a, b, w, c) { g.lineWidth = w; g.strokeStyle = col(c); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
-function dot(p, r, c) { g.fillStyle = col(c); g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.fill(); }
-function ring(p, r, w, c) { g.lineWidth = w; g.strokeStyle = col(c); g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.stroke(); }
-function poly(pts, c) { g.fillStyle = col(c); g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); g.fill(); }
-function box(x, y, w, h, c) { g.fillStyle = col(c); g.fillRect(x, y, w, h); }
-function roundArch(x, yb, w, h, c) {
-  g.fillStyle = col(c); g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h + w / 2);
-  g.arc(x, yb - h + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
-}
-function pointArch(x, yb, w, h, c) {
-  g.fillStyle = col(c); g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h * .6);
-  g.quadraticCurveTo(x - w / 2, yb - h * .92, x, yb - h); g.quadraticCurveTo(x + w / 2, yb - h * .92, x + w / 2, yb - h * .6);
-  g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
-}
-
-/* ================================================================
-   KROPP – piktogramstil. Enheter: ca. 100 = en person. y = 0 er bakken.
-   ================================================================ */
-const FAR = .3;
-const tone = (c, far) => far ? darken(c, FAR) : hx(c);
-
-function drawLeg(hip, knee, foot, L, far, o = {}) {
-  const skin = tone(L.skin, far), bot = tone(L.bottom, far);
-  const full = L.legs === 'tights';
-  seg(hip, knee, 9.6, full ? bot : skin);
-  seg(knee, foot, 8, full ? bot : skin);
-  if (!full && L.shortLen > 0) seg(hip, along(hip, knee, L.shortLen), 11, bot);
-  const d = norm(sub(foot, knee));
-  if (o.toe) { seg(foot, add(foot, d, 5.5), 4.2, skin); return; }
-  if (o.shoe === false) return;
-  const f = o.footDir || [d[1], -d[0]];
-  const b = add(foot, d, 1.2);
-  seg(add(b, f, -1.4), add(b, f, 5.4), 4.8, tone(L.shoe, far));
-}
-function drawArm(sh, el, hand, L, far) {
-  const skin = tone(L.skin, far), top = tone(L.top, far);
-  const lng = L.sleeves === 'long';
-  seg(sh, el, 7.2, lng ? top : skin);
-  seg(el, hand, 6.2, lng ? top : skin);
-  if (L.sleeves === 'short') seg(sh, along(sh, el, .48), 8.4, top);
-  dot(hand, 3.3, L.glove ? tone(L.glove, far) : skin);
-}
-function drawTorso(hip, neck, L) {
-  const w = L.gender === 'f' ? 12.2 : 13.4;
-  seg(hip, neck, w, L.torsoSkin ? L.skin : L.top);
-  if (L.waist) seg(hip, along(hip, neck, L.waist), w + .6, L.bottom);
-}
-function drawHead(neck, hc, L, o = {}) {
-  const r = L.gender === 'f' ? 6.9 : 7.3;
-  const hat = L.hat || 'none';
-  seg(neck, along(neck, hc, .6), 5.2, L.skin);
-  g.save(); g.translate(hc[0], hc[1]); if (o.rot) g.rotate(o.rot);
-  // hestehale
-  if (L.gender === 'f' && hat !== 'cap' && hat !== 'hood' && hat !== 'aero') {
-    const s = o.sway || 0;
-    g.strokeStyle = css(L.hair); g.lineWidth = 4.4;
-    g.beginPath(); g.moveTo(-r * .6, -r * .5);
-    g.quadraticCurveTo(-r - 4.5, -r * .75 + s * 1.2, -r - 9, 1.2 + s * 3.4); g.stroke();
-    g.lineWidth = 2.6; g.beginPath(); g.moveTo(-r - 6.5, -1.2 + s * 2.3); g.lineTo(-r - 11, 3.6 + s * 4.2); g.stroke();
+  function mix(a, b, k) { a = hx(a); b = hx(b); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+  function css(c, al) {
+    c = hx(c);
+    const r = Math.round(c[0]), gg = Math.round(c[1]), b = Math.round(c[2]);
+    return al === undefined || al >= 1 ? `rgb(${r},${gg},${b})` : `rgba(${r},${gg},${b},${Math.max(0, al).toFixed(3)})`;
   }
-  dot([0, 0], r, L.skin);
-  if (hat !== 'cap' && hat !== 'hood' && hat !== 'aero') {
-    g.fillStyle = css(L.hair); g.beginPath(); g.arc(0, 0, r + .5, 150 * D2R, 335 * D2R); g.closePath(); g.fill();
+
+  // Alle fargene i scenen kommer fra appens drakt: bakgrunn, tekst og
+  // hovedfarge. Resten er blandinger av dem.
+  let P = null;
+  function settPalett(p) {
+    p = p || {};
+    const bg = p.bg || '#F2F2F7', ink = p.ink || '#000000', ak = p.aksent || '#5E5CE6', mork = !!p.mork;
+    P = {
+      bg: css(bg),
+      naer: css(ak),                                    // kroppen, nær side
+      fjern: css(mix(ak, bg, .5)),                      // armen og beinet bak
+      utstyr: css(mix(bg, ink, mork ? .52 : .45)),      // sykkel, ski, båt …
+      utstyrFjern: css(mix(bg, ink, mork ? .3 : .25)),
+      lm: css(mix(bg, ink, mork ? .1 : .075)),          // landemerket
+      linje: mix(bg, ink, mork ? .32 : .24),            // bakken
+      vann: css(bg, .62),                               // det som er under vannflaten
+    };
   }
-  switch (hat) {
-    case 'helmet': {
-      g.fillStyle = css(L.gear2 || '#FFFFFF'); g.beginPath();
-      g.ellipse(-1.4, -1.8, r + 2.6, r + .9, -.12, Math.PI * .98, TAU + .05); g.closePath(); g.fill();
-      g.strokeStyle = css(L.gear); g.lineWidth = 1.6; g.beginPath();
-      g.ellipse(-1.4, -1.8, r + 1.4, r - .2, -.12, Math.PI * 1.08, TAU - .15); g.stroke();
-      break;
+
+  /* ---------- vektorer ---------- */
+  const add = (p, v, L = 1) => [p[0] + v[0] * L, p[1] + v[1] * L];
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const norm = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
+  const along = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  const dn = deg => { const r = deg * D2R; return [Math.sin(r), Math.cos(r)]; };   // 0 = rett ned, + = framover
+  const up = deg => { const r = deg * D2R; return [Math.sin(r), -Math.cos(r)]; };  // 0 = rett opp, + = framover
+  const limb = (p, deg, L) => add(p, dn(deg), L);
+  // To-ledds invers kinematikk. Returnerer [midtledd, endepunkt].
+  function ik(a, b, L1, L2, bend) {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const d0 = Math.hypot(dx, dy) || 1e-3;
+    const d = clamp(d0, Math.abs(L1 - L2) + .5, L1 + L2 - .05);
+    const base = Math.atan2(dy, dx);
+    const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+    return [
+      [a[0] + Math.cos(base + bend * A) * L1, a[1] + Math.sin(base + bend * A) * L1],
+      [a[0] + dx / d0 * d, a[1] + dy / d0 * d]
+    ];
+  }
+
+  /* ---------- tegneprimitiver (g = aktiv kontekst) ---------- */
+  let g = null;
+  function seg(a, b, w, c) { g.lineWidth = w; g.strokeStyle = c; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  function dot(p, r, c) { g.fillStyle = c; g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.fill(); }
+  function ring(p, r, w, c) { g.lineWidth = w; g.strokeStyle = c; g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.stroke(); }
+  function sti(pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); }
+  function poly(pts, c) { g.fillStyle = c; sti(pts); g.fill(); }
+  function box(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function roundArch(x, yb, w, h, c) {
+    g.fillStyle = c; g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h + w / 2);
+    g.arc(x, yb - h + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
+  }
+  function pointArch(x, yb, w, h, c) {
+    g.fillStyle = c; g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h * .6);
+    g.quadraticCurveTo(x - w / 2, yb - h * .92, x, yb - h); g.quadraticCurveTo(x + w / 2, yb - h * .92, x + w / 2, yb - h * .6);
+    g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
+  }
+  // Skjærer ut av det som alt er tegnet (a < 1 gir en lysere flate i
+  // stedet for et hull). Gir buer, vinduer og skiller uten en ny farge.
+  const UT = '#000';
+  function ut(fn, a = 1) { g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = a; fn(); g.restore(); }
+
+  /* ================================================================
+     KROPP – piktogram i én farge. Enheter: ca. 100 = en person.
+     y = 0 er bakken.
+     ================================================================ */
+  const farge = far => far ? P.fjern : P.naer;
+
+  function drawLeg(hip, knee, foot, far, o = {}) {
+    const c = farge(far);
+    seg(hip, knee, 9.4, c);
+    seg(knee, foot, 7.8, c);
+    const d = norm(sub(foot, knee));
+    if (o.toe) { seg(foot, add(foot, d, 5), 4.4, c); return; }
+    if (o.shoe === false) return;
+    const f = o.footDir || [d[1], -d[0]];
+    const b = add(foot, d, 1.2);
+    seg(add(b, f, -1.4), add(b, f, 5.2), 4.6, c);
+  }
+  // Den nære armen får en smal luftspalte rundt underarmen, så den skiller
+  // seg fra kroppen den krysser (klassisk piktogramgrep). Ikke der hånda
+  // holder i noe (styre, drivring), da ville spalten kuttet utstyret.
+  function drawArm(sh, el, hand, far, luft = true) {
+    const c = farge(far);
+    if (!far && luft) ut(() => seg(el, hand, 9.6, UT));
+    seg(sh, el, 7.2, c);
+    seg(el, hand, 6.2, c);
+    dot(hand, 3.3, c);
+  }
+  function drawTorso(hip, neck, A) {
+    seg(hip, neck, A.gender === 'f' ? 12.2 : 13.4, P.naer);
+  }
+  function drawHead(neck, hc, A, o = {}) {
+    const r = A.gender === 'f' ? 6.9 : 7.3;
+    seg(neck, along(neck, hc, .6), 5.2, P.naer);
+    g.save(); g.translate(hc[0], hc[1]); if (o.rot) g.rotate(o.rot);
+    // hestehale – det eneste som skiller kvinne og mann
+    if (A.gender === 'f' && !o.badehette) {
+      const s = o.sway || 0;
+      g.strokeStyle = P.naer; g.lineWidth = 4.4;
+      g.beginPath(); g.moveTo(-r * .6, -r * .5);
+      g.quadraticCurveTo(-r - 4.5, -r * .75 + s * 1.2, -r - 9, 1.2 + s * 3.4); g.stroke();
+      g.lineWidth = 2.6; g.beginPath(); g.moveTo(-r - 6.5, -1.2 + s * 2.3); g.lineTo(-r - 11, 3.6 + s * 4.2); g.stroke();
     }
-    case 'cap': {
-      g.fillStyle = css(L.gear); g.beginPath(); g.arc(0, 0, r + .55, 118 * D2R, 372 * D2R); g.closePath(); g.fill();
-      seg([r * .1, -r * .02], [-r * .95, r * .12], 1.1, '#11161F');
-      seg([r * .28, -r * .05], [r * .98, -r * .02], 2.8, '#11161F');
-      break;
-    }
-    case 'hood': {
-      dot([0, 0], r + .6, L.top);
-      g.fillStyle = css(L.skin); g.beginPath(); g.moveTo(r * .1, 0); g.arc(0, 0, r * .8, -40 * D2R, 62 * D2R); g.closePath(); g.fill();
-      seg([r * .3, -r * .3], [r * .98, -r * .2], 2.5, '#11161F');
-      break;
-    }
-    case 'band': {
-      g.save(); g.beginPath(); g.arc(0, 0, r + .8, 0, TAU); g.clip();
-      seg([-r - 2, -r * .05], [r + 2, -r * .55], 3.4, L.gear); g.restore();
-      break;
-    }
-    case 'beanie': {
-      const a0 = 160 * D2R, a1 = 350 * D2R;
-      g.fillStyle = css(L.gear); g.beginPath(); g.arc(0, 0, r + 1, a0, a1); g.closePath(); g.fill();
-      seg([Math.cos(a0) * (r + 1), Math.sin(a0) * (r + 1)], [Math.cos(a1) * (r + 1), Math.sin(a1) * (r + 1)], 2.6, darken(L.gear, .3));
-      dot([-r * .45, -r - 1.6], 2.3, '#FFFFFF');
-      break;
-    }
-    case 'aero': {
-      g.fillStyle = css(L.gear); g.beginPath(); g.moveTo(r + 1.6, .2);
-      g.arc(0, 0, r + 1.9, .05, Math.PI + .22, true); g.lineTo(-r - 11, .8);
-      g.quadraticCurveTo(-r * .3, r * .2, r + 1.6, .2); g.closePath(); g.fill();
-      g.strokeStyle = '#7FB6E8'; g.lineWidth = 2.4; g.beginPath(); g.arc(0, 0, r + 1.1, -.55, .12); g.stroke();
-      break;
-    }
-  }
-  if (L.glasses) seg([r * .3, -r * .14], [r * 1.02, -r * .08], 2.4, '#141A26');
-  g.restore();
-}
-
-/* ---------- partikler (snøsprut, vannsprut, støv) ---------- */
-function emit(A, x, y, n, o) {
-  for (let i = 0; i < n; i++) {
-    const life = o.life * rnd(.7, 1.2);
-    A.parts.push({
-      x: x + rnd(-1, 1) * (o.sx || 0), y: y + rnd(-1, 1) * (o.sy || 0),
-      vx: (o.vx || 0) + rnd(-1, 1) * (o.jx || 0), vy: (o.vy || 0) + rnd(-1, 1) * (o.jy || 0),
-      gr: o.g === undefined ? 160 : o.g, life, max: life, r: o.r * rnd(.6, 1.3), c: o.c, drift: o.drift === undefined ? 1 : o.drift
-    });
-  }
-}
-function crossed(A, key, v) {
-  const n = Math.floor(v), prev = A.marks[key];
-  A.marks[key] = n;
-  return prev !== undefined && n !== prev;
-}
-
-/* ================================================================
-   IDRETTER
-   ================================================================ */
-const SPORTS = {};
-
-/* ---- Løping ---- */
-SPORTS.run = {
-  name: 'Løping', verb: 'løper', ground: 'road', speed: 1, shadow: 24,
-  draw(A) {
-    const L = A.look, th = A.t / .68 * TAU;
-    const hip = [0, -53.4 + 2.2 * Math.cos(2 * th)];
-    const lean = 11 + 1.5 * Math.cos(2 * th);
-    const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5);
-    const hc = add(neck, up(lean + 6), 9.2);
-    const leg = ph => {
-      const a = 10 + 36 * Math.sin(ph), f = 16 + 100 * Math.pow(Math.max(0, Math.cos(ph + .3)), 2);
-      const k = limb(hip, a, 26); return [k, limb(k, a - f, 26)];
-    };
-    const arm = ph => {
-      const a = 4 - 42 * Math.sin(ph), f = 88 - 16 * Math.sin(ph);
-      const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
-    };
-    const ln = leg(th), lf = leg(th + Math.PI), an = arm(th), af = arm(th + Math.PI);
-    drawArm(sh, af[0], af[1], L, true);
-    drawLeg(hip, lf[0], lf[1], L, true);
-    drawTorso(hip, neck, L);
-    drawLeg(hip, ln[0], ln[1], L, false);
-    drawHead(neck, hc, L, { sway: Math.sin(2 * th - .6) });
-    drawArm(sh, an[0], an[1], L, false);
-    if (crossed(A, 'step', (th - Math.PI / 2) / Math.PI)) {
-      const f = Math.floor((th - Math.PI / 2) / Math.PI) % 2 ? lf[1] : ln[1];
-      emit(A, f[0] - 2, 1, 3, { vx: -20, jx: 14, vy: -14, jy: 8, g: 40, life: .45, r: 2.2, c: [205, 190, 170], sx: 3 });
-    }
-  }
-};
-
-/* ---- Sykling ---- */
-function wheel(c, R, rot, far) {
-  const tire = far ? '#15181F' : '#1B1E26';
-  ring(c, R - 1.3, 2.7, tire);
-  ring(c, R - 3, 1.2, far ? '#4E5563' : '#6D7482');
-  g.lineWidth = .5; g.strokeStyle = far ? 'rgba(170,178,192,.5)' : 'rgba(200,206,216,.75)';
-  g.beginPath();
-  for (let i = 0; i < 14; i++) {
-    const a = rot + i * TAU / 14;
-    g.moveTo(c[0], c[1]); g.lineTo(c[0] + Math.cos(a) * (R - 3.4), c[1] + Math.sin(a) * (R - 3.4));
-  }
-  g.stroke();
-  dot(c, 1.7, '#2A2F3A');
-}
-SPORTS.bike = {
-  name: 'Sykling', verb: 'sykler', ground: 'road', speed: 2.1, shadow: 40,
-  draw(A) {
-    const L = A.look, cad = A.t / .6 * TAU, R = 17.5, rot = A.dist / R;
-    const rear = [-29, -R], front = [30, -R], bb = [0, -12.5];
-    const hip = [-12, -53], lean = 57 + 1.2 * Math.sin(cad * 2);
-    const tv = up(lean), neck = add(hip, tv, 28.5), sh = add(hip, tv, 25);
-    const hc = add(neck, [6, -5.2]);
-    const cr = 8.5;
-    const pn = [bb[0] + Math.cos(cad) * cr, bb[1] + Math.sin(cad) * cr];
-    const pf = [bb[0] - Math.cos(cad) * cr, bb[1] - Math.sin(cad) * cr];
-    const hood = [28, -47.2];
-    const kn = ik(hip, pn, 26, 25, -1), kf = ik(hip, pf, 26, 25, -1);
-    const en = ik(sh, hood, 16, 14.5, 1), ef = ik(sh, [hood[0] - 1.2, hood[1] - .8], 16, 14.5, 1);
-    const fr = hx(L.gear), frd = darken(L.gear, .3);
-    wheel(rear, R, rot, false); wheel(front, R, rot, false);
-    // bakre pedalarm + fjerne bein
-    seg(bb, pf, 2.4, '#262B35'); seg([pf[0] - 2.6, pf[1]], [pf[0] + 2.6, pf[1]], 2.2, '#262B35');
-    drawLeg(hip, kf[0], kf[1], L, true, { footDir: [1, .1] });
-    drawArm(sh, ef[0], ef[1], L, true);
-    // ramme
-    const seatC = [-8.5, -39], htTop = [21, -42.5], htBot = [23.5, -33];
-    seg(rear, bb, 2.5, frd); seg(rear, seatC, 2.3, fr);
-    seg(bb, seatC, 3.2, fr); seg(seatC, htTop, 3.2, fr); seg(bb, htBot, 3.6, fr);
-    seg(htTop, htBot, 3.8, fr); seg(htBot, front, 2.8, fr);
-    seg(seatC, [-10.5, -48], 2.2, '#2A2F3A'); seg([-15.5, -49.4], [-6.5, -49.9], 3.2, '#1C2029');
-    seg(htTop, [25, -45.5], 2.6, '#2A2F3A');
-    g.strokeStyle = '#1C2029'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(25, -45.5); g.lineTo(28.5, -46.8);
-    g.quadraticCurveTo(32.5, -45.5, 31.2, -40.5); g.quadraticCurveTo(30.2, -37.8, 27.2, -38.4); g.stroke();
-    ring(bb, 5.2, 1.4, '#3A404C');
-    seg([bb[0], bb[1] - 5.2], [rear[0], rear[1] - 2.4], .8, '#59606C'); seg([bb[0], bb[1] + 5.2], [rear[0], rear[1] + 2.4], .8, '#59606C');
-    drawTorso(hip, neck, L);
-    drawLeg(hip, kn[0], kn[1], L, false, { footDir: [1, .1] });
-    seg(bb, pn, 2.6, '#3A404C'); seg([pn[0] - 2.6, pn[1]], [pn[0] + 2.6, pn[1]], 2.2, '#3A404C');
-    drawHead(neck, hc, L, { sway: Math.sin(cad) * .4 });
-    drawArm(sh, en[0], en[1], L, false);
-  }
-};
-
-/* ---- Langrenn (klassisk diagonalgang) ---- */
-SPORTS.ski = {
-  name: 'Langrenn', verb: 'går på ski', ground: 'snow', speed: 1.3, shadow: 42,
-  draw(A) {
-    const L = A.look, th = A.t / 1.15 * TAU;
-    const hip = [0, -49.5 + 1.6 * Math.cos(2 * th)];
-    const lean = 19 + 5 * Math.cos(2 * th + .6);
-    const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5), hc = add(neck, up(lean + 2), 9);
-    const foot = (ph, dy) => {
-      const lift = 7.5 * Math.pow(Math.max(0, Math.cos(ph + Math.PI / 2 - .55)), 6);
-      return { a: [21 * Math.sin(ph), -3 - lift + dy], lift, dy };
-    };
-    const arm = ph => {
-      const a = 12 - 55 * Math.sin(ph), f = 18 - 12 * Math.sin(ph);
-      const e = limb(sh, a, 16), h = limb(e, a + f, 14.5);
-      const Lp = 72;
-      let b = Math.acos(clamp(-h[1] / Lp, 0, 1));
-      if (Math.cos(ph) < 0) {
-        const s = ((((ph - Math.PI / 2) % TAU) + TAU) % TAU) / Math.PI;
-        b += .5 * Math.sin(Math.PI * clamp(s, 0, 1));
-      }
-      return { e, h, tip: [h[0] - Math.sin(b) * Lp, h[1] + Math.cos(b) * Lp] };
-    };
-    const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
-    const kn = ik(hip, fn.a, 26, 25.5, -1), kf = ik(hip, ff.a, 26, 25.5, -1);
-    const an = arm(th), af = arm(th + Math.PI);
-    const skiCol = L.ski || L.gear;
-    const ski = (f, far) => {
-      const b = [f.a[0], f.a[1] + 3], r = f.lift * 1.1 * D2R, d = [Math.cos(r), Math.sin(r)];
-      const tip = add(b, d, 48), tail = add(b, d, -42), c = tone(skiCol, far);
-      seg(tail, add(tip, d, -6), 2.3, c);
-      g.strokeStyle = css(c); g.lineWidth = 2.3; g.beginPath(); g.moveTo(...add(tip, d, -6));
-      g.quadraticCurveTo(tip[0], tip[1], tip[0] + 1.5, tip[1] - 3.2); g.stroke();
-    };
-    const boot = (f, far) => seg([f.a[0] - 2, f.a[1] + 1], [f.a[0] + 5.5, f.a[1] + 1.2], 5, tone(L.shoe, far));
-    const pole = (p, far) => {
-      const c = far ? '#1C2029' : (L.pole || '#232833');
-      seg(p.h, p.tip, 1.8, c);
-      const d = norm(sub(p.tip, p.h)), q = add(p.h, d, 64), n = [-d[1], d[0]];
-      seg(add(q, n, -2.4), add(q, n, 2.4), 1.3, c);
-    };
-    pole(af, true); ski(ff, true);
-    drawLeg(hip, kf[0], kf[1], L, true, { shoe: false }); boot(ff, true);
-    drawArm(sh, af.e, af.h, L, true);
-    drawTorso(hip, neck, L);
-    ski(fn, false);
-    drawLeg(hip, kn[0], kn[1], L, false, { shoe: false }); boot(fn, false);
-    drawHead(neck, hc, L, { sway: Math.sin(2 * th) * .7 });
-    drawArm(sh, an.e, an.h, L, false); pole(an, false);
-    for (const [key, ph, f] of [['kn', th, fn], ['kf', th + Math.PI, ff]]) {
-      if (crossed(A, key, (ph + Math.PI / 2 + .1) / TAU)) emit(A, f.a[0] - 36, -.5, 7, { vx: -30, jx: 22, vy: -34, jy: 16, g: 120, life: .6, r: 1.8, c: [248, 251, 255], sx: 6 });
-    }
-  }
-};
-
-/* ---- Svømming (crawl) ---- */
-SPORTS.swim = {
-  name: 'Svømming', verb: 'svømmer', ground: 'water', speed: .55, water: true,
-  draw(A) {
-    const L = A.look, T = 1.35, q = fract(A.t / T), th = q * TAU, wl = -7;
-    const hip = [-16, wl + 4.2 + .5 * Math.sin(2 * th)];
-    const tv = up(85.5), neck = add(hip, tv, 28), sh = add(hip, tv, 25);
-    const breathe = (q > .45 && q < .8) ? Math.sin((q - .45) / .35 * Math.PI) : 0;
-    const hc = add(neck, [8.6, -1.2 - 2.4 * breathe]);
-    const leg = ph => {
-      const a = -91 + 9 * Math.sin(3 * ph), f = 8 + 16 * Math.max(0, Math.sin(3 * ph + 1.2));
-      const k = limb(hip, a, 26); return [k, limb(k, a - f, 25)];
-    };
-    const arm = qq => {
-      qq = fract(qq);
-      const a = 90 - 360 * qq;
-      const f = qq < .5 ? -38 * Math.sin(Math.PI * qq / .5) : 105 * Math.sin(Math.PI * (qq - .5) / .5);
-      const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
-    };
-    const ln = leg(th), lf = leg(th + Math.PI), an = arm(q), af = arm(q + .5);
-    drawArm(sh, af[0], af[1], L, true);
-    drawLeg(hip, lf[0], lf[1], L, true, { toe: true });
-    drawTorso(hip, neck, L);
-    drawLeg(hip, ln[0], ln[1], L, false, { toe: true });
-    drawHead(neck, hc, L, { rot: Math.PI / 2 - .3 * breathe });
-    drawArm(sh, an[0], an[1], L, false);
-    // alt under vannflaten får vannfarge
-    g.save(); g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(24,96,150,.62)'; g.beginPath(); g.moveTo(-200, wl);
-    for (let x = -200; x <= 200; x += 8) g.lineTo(x, wl + Math.sin(x * .09 + A.t * 5) * 1.1);
-    g.lineTo(200, 120); g.lineTo(-200, 120); g.closePath(); g.fill(); g.restore();
-    g.strokeStyle = 'rgba(235,248,255,.7)'; g.lineWidth = 1.1; g.beginPath();
-    for (let x = -80; x <= 42; x += 4) { const y = wl + Math.sin(x * .09 + A.t * 5) * 1.1; x === -80 ? g.moveTo(x, y) : g.lineTo(x, y); }
-    g.stroke();
-    if (crossed(A, 'en', q)) emit(A, an[1][0], wl, 9, { vx: 10, jx: 26, vy: -44, jy: 18, g: 190, life: .55, r: 1.9, c: [240, 250, 255], sx: 3 });
-    if (crossed(A, 'ef', q + .5)) emit(A, af[1][0], wl, 7, { vx: 10, jx: 24, vy: -40, jy: 16, g: 190, life: .5, r: 1.7, c: [225, 242, 252], sx: 3 });
-    if (Math.random() < .55) emit(A, lerp(ln[1][0], lf[1][0], Math.random()) - 3, wl - 1, 1, { vx: -6, jx: 10, vy: -16, jy: 12, g: 90, life: .5, r: 1.6, c: [250, 253, 255], sx: 4 });
-  }
-};
-
-/* ---- Roing (singlesculler – roeren ser bakover) ---- */
-SPORTS.row = {
-  name: 'Roing', verb: 'ror', ground: 'water', speed: 1.35, water: true,
-  draw(A) {
-    const L = A.look, T = 1.9, u = fract(A.t / T), wl = -6;
-    let legs, back, arms;
-    if (u < .42) { const d = u / .42; legs = smooth(0, .62, d); back = smooth(.28, .85, d); arms = smooth(.58, 1, d); }
-    else { const r = (u - .42) / .58; arms = 1 - smooth(0, .3, r); back = 1 - smooth(.12, .48, r); legs = 1 - smooth(.35, 1, r); }
-    const bladeIn = smooth(0, .05, u) * (1 - smooth(.39, .45, u));
-    const square = Math.max(bladeIn, smooth(.86, .96, u));
-    g.save(); g.scale(-1, 1);
-    const hip = [lerp(3, -19, legs), wl - 12.5], feet = [29, wl - 8];
-    const kn = ik(hip, feet, 26, 25, -1);
-    const lean = lerp(26, -24, back);
-    const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean * .5 + 4), 9);
-    const nrm = [-tv[1], tv[0]];
-    const ext = add(sh, [29.5, 5]), chest = add(add(hip, tv, 14), nrm, 8.5);
-    const hand = along(ext, chest, arms); hand[1] += (1 - bladeIn) * 2.2;
-    const el = ik(sh, hand, 16, 14.5, 1);
-    const pin = [15, wl - 14];
-    const oar = (dx, dy, far) => {
-      const h = [hand[0] + dx, hand[1] + dy];
-      const b = [pin[0] + (pin[0] - h[0]) * 2, lerp(wl - 6, wl + 1.5, bladeIn) + dy];
-      const d = norm(sub(b, h));
-      const c = far ? '#161A22' : '#20252F';
-      seg(h, b, 1.8, c);
-      seg(b, add(b, d, 8.5), lerp(1.7, 4.6, square), far ? darken(L.blade, .3) : L.blade);
-      return b;
-    };
-    oar(1, -1.4, true);
-    // skrog
-    const hull = hx(L.boat);
-    g.fillStyle = css(hull); g.beginPath(); g.moveTo(-66, wl - 2.4); g.lineTo(70, wl - 3.2);
-    g.quadraticCurveTo(40, wl + 3.4, 0, wl + 3.1); g.quadraticCurveTo(-45, wl + 2.7, -66, wl - 2.4); g.closePath(); g.fill();
-    seg([-60, wl - 2.6], [64, wl - 3.1], 1.2, L.blade);
-    seg([-24, wl - 6.6], [8, wl - 6.6], 1.2, '#5B6270');
-    seg([hip[0] - 4.5, hip[1] + 3.2], [hip[0] + 4.5, hip[1] + 3.2], 3, '#2A2F3A');
-    seg([28.5, wl - 3.5], [31.5, wl - 12], 2.4, '#2A2F3A');
-    drawArm(sh, el[0], el[1], L, true);
-    drawLeg(hip, kn[0], kn[1], L, true);
-    drawTorso(hip, neck, L);
-    drawLeg([hip[0], hip[1] + .6], ik([hip[0], hip[1] + .6], [feet[0], feet[1] + 1], 26, 25, -1)[0], [feet[0], feet[1] + 1], L, false);
-    drawHead(neck, hc, L, { sway: Math.sin(u * TAU) * .6 });
-    drawArm(sh, el[0], el[1], L, false);
-    const b = oar(0, 0, false);
-    seg([9, wl - 3], pin, 1.4, '#5B6270'); seg([22, wl - 3], pin, 1.4, '#5B6270');
+    dot([0, 0], r, P.naer);
     g.restore();
-    g.save(); g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = 'rgba(24,96,150,.6)'; g.fillRect(-200, wl + .6, 400, 120); g.restore();
-    if (crossed(A, 'catch', u - .03)) emit(A, -b[0], wl, 8, { vx: -10, jx: 22, vy: -36, jy: 14, g: 190, life: .5, r: 1.8, c: [240, 250, 255], sx: 3 });
-    if (crossed(A, 'out', u - .43)) emit(A, -b[0], wl, 10, { vx: 20, jx: 26, vy: -30, jy: 14, g: 190, life: .55, r: 1.6, c: [235, 247, 255], sx: 4 });
   }
-};
-
-/* ---- Skøyter (langløp) ---- */
-SPORTS.skate = {
-  name: 'Skøyter', verb: 'går på skøyter', ground: 'ice', speed: 2, shadow: 30,
-  draw(A) {
-    const L = A.look, th = A.t / 1.3 * TAU;
-    const hip = [0, -36 + 1.3 * Math.cos(2 * th)];
-    const lean = 70 + 3 * Math.sin(2 * th + .4);
-    const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean - 44), 8.6);
-    const nrm = [-tv[1], tv[0]];
-    const foot = (ph, dy) => {
-      const s = fract(ph / TAU);
-      let x, lift = 0;
-      if (s < .56) { const k = s / .56; x = 9 - 41 * Math.pow(k, 2.2); }
-      else { const k = (s - .56) / .44; x = -32 + 41 * easeInOut(k); lift = 12 * Math.sin(Math.PI * k); }
-      return { a: [x, -4 - lift + dy], lift, s };
-    };
-    const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
-    const kn = ik(hip, fn.a, 26, 25, -1), kf = ik(hip, ff.a, 26, 25, -1);
-    const skate = (f, far) => {
-      const r = f.lift * 1.4 * D2R, d = [Math.cos(r), Math.sin(r)], nb = [-d[1], d[0]];
-      const b = add(f.a, nb, 4);
-      seg(add(b, d, -11), add(b, d, 17), 1.3, far ? '#8F9AA8' : '#C9D2DC');
-      seg(add(f.a, d, -1.5), add(b, d, -1.5), 1.4, '#3A404C'); seg(add(f.a, d, 6.5), add(b, d, 8.5), 1.4, '#3A404C');
-      seg(add(f.a, d, -1.8), add(f.a, d, 6.5), 5.2, tone(L.shoe, far));
-    };
-    // armen som ligger på ryggen
-    const bh = add(add(hip, tv, 5), nrm, -7.2);
-    const be = ik(sh, bh, 16, 14.5, -1);
-    const aa = -35 - 70 * Math.cos(th), ae = limb(sh, aa, 16), ah = limb(ae, aa + 12, 14.5);
-    drawLeg(hip, kf[0], kf[1], L, true, { shoe: false }); skate(ff, true);
-    drawTorso(hip, neck, L);
-    drawArm(sh, be[0], be[1], L, true);
-    drawLeg(hip, kn[0], kn[1], L, false, { shoe: false }); skate(fn, false);
-    drawHead(neck, hc, L);
-    drawArm(sh, ae, ah, L, false);
-    for (const [key, f] of [['pn', fn], ['pf', ff]]) {
-      if (crossed(A, key, f.s + .44)) emit(A, f.a[0] - 8, -.5, 6, { vx: -40, jx: 20, vy: -22, jy: 10, g: 110, life: .45, r: 1.4, c: [236, 246, 252], sx: 4 });
-    }
-  }
-};
-
-/* ---- Rullestolløp ---- */
-SPORTS.wheel = {
-  name: 'Rullestolløp', verb: 'kjører rullestolløp', ground: 'track', speed: 2, shadow: 42,
-  draw(A) {
-    const L = A.look, T = .95, u = fract(A.t / T), R = 20, C = [0, -R], rimR = 11, rot = A.dist / R;
-    let ang, rad, push;
-    if (u < .42) { const k = easeInOut(u / .42); ang = lerp(-110, 70, k); rad = rimR; push = Math.sin(Math.PI * u / .42); }
-    else { const k = (u - .42) / .58; ang = lerp(70, 250, easeInOut(k)); rad = rimR + 7 * Math.sin(Math.PI * k); push = 0; }
-    const hand = [C[0] + Math.cos(ang * D2R) * rad, C[1] + Math.sin(ang * D2R) * rad];
-    const hip = [-10, -26];
-    const lean = 76 + 5 * push;
-    const tv = up(lean), neck = add(hip, tv, 27), sh = add(hip, tv, 24), hc = add(neck, [7, -4.6 + 1.2 * push]);
-    const el = ik(sh, hand, 16, 14.5, 1), elf = ik(sh, [hand[0] - 1, hand[1] - 1], 16, 14.5, 1);
-    const knee = [13, -17], foot = [-9, -11.5];
-    const frame = L.frame || '#A9B4C4';
-    drawArm(sh, elf[0], elf[1], L, true);
-    ring([C[0] - 1, C[1] - .6], rimR, 1.4, '#6E7887');
-    wheel([C[0] - 1, C[1] - .6], R, rot, true);
-    // ramme + forhjul
-    seg([-6, -9], [54, -8], 2.6, frame); seg([36, -8.5], [41, -14], 2, frame); seg([41, -14], [45, -14], 2, '#2A2F3A');
-    wheel([58, -6.5], 6.5, rot * R / 6.5, false);
-    seg([50, -8], [58, -6.5], 2.2, frame);
-    drawLeg(hip, knee, foot, L, true, { footDir: [-1, .15] });
-    // setebøtte
-    g.fillStyle = '#262B37'; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-20, -9); g.lineTo(17, -9);
-    g.quadraticCurveTo(22, -9, 21, -14); g.lineTo(16, -19); g.lineTo(2, -19); g.lineTo(-8, -22); g.closePath(); g.fill();
-    seg([-20, -9], [18, -9], 1.6, frame);
-    drawTorso(hip, neck, L);
-    drawHead(neck, hc, L);
-    wheel(C, R, rot, false);
-    ring(C, rimR, 1.7, '#B7C0CC');
-    drawArm(sh, el[0], el[1], L, false);
-  }
-};
-
-/* ================================================================
-   LANDEMERKER – tegnet i egne enheter, base i (0,0), y opp er negativ.
-   box = [minX, maxX, høyde]
-   ================================================================ */
-function spruce(x, base, h, c, snow) {
-  for (let k = 0; k < 3; k++) {
-    const w = h * (.34 - k * .08), yb = base - h * k * .26, yt = yb - h * .46;
-    poly([x - w, yb, x + w, yb, x, yt], c);
-    if (snow) poly([x - w * .42, yt + h * .2, x + w * .42, yt + h * .2, x, yt], snow);
-  }
-}
-const LM = {};
-
-LM.holmenkollen = { box: [-150, 150, 218], draw(c) {
-  const hy = x => x <= 18 ? -104 * (1 - Math.pow(1 - clamp((x + 150) / 100, 0, 1), 2)) : -104 * Math.pow(1 - clamp((x - 18) / 132, 0, 1), 2.2);
-  g.fillStyle = css(c.f); g.beginPath(); g.moveTo(-150, 0);
-  for (let x = -150; x <= 150; x += 3) g.lineTo(x, hy(x));
-  g.lineTo(150, 0); g.closePath(); g.fill();
-  g.strokeStyle = css(c.snow); g.lineWidth = 3.4; g.beginPath();
-  for (let x = 19; x <= 150; x += 3) { const y = hy(x) + 1.5; x === 19 ? g.moveTo(x, y) : g.lineTo(x, y); }
-  g.stroke();
-  for (let i = 0; i < 24; i++) { const x = -147 + i * 7 + hash(i) * 3; if (x > 12) break; spruce(x, hy(x) + 1.5, 9 + hash(i + 9) * 9, c.f); }
-  const tb = hy(-70);
-  poly([-77, tb + 2, -63, tb + 2, -66, -200, -74, -200], c.f);
-  box(-81, -213, 22, 14, c.f); poly([-83, -213, -57, -213, -62, -218, -78, -218], c.f);
-  poly([-74, -206, -66, -210, 22, -110, 16, -104], c.f);
-  seg([-68, -208.5], [19, -108.5], 1.3, c.snow);
-  for (const x of [-44, -18]) { const t = (x + 70) / 88, yr = lerp(-205, -106, t); box(x - 1.6, yr, 3.2, hy(x) - yr + 2, c.f); }
-  box(-78, -209, 3, 4, c.l); box(-72, -209, 3, 4, c.l); box(-66, -209, 3, 4, c.l);
-}};
-
-LM.eiffel = { box: [-80, 80, 300], draw(c) {
-  const p = new Path2D();
-  p.moveTo(-78, 0); p.quadraticCurveTo(-44, -40, -27, -100); p.quadraticCurveTo(-14, -170, -6, -252);
-  p.lineTo(-4.5, -268); p.lineTo(4.5, -268); p.lineTo(6, -252); p.quadraticCurveTo(14, -170, 27, -100);
-  p.quadraticCurveTo(44, -40, 78, 0); p.lineTo(56, 0); p.quadraticCurveTo(0, -82, -56, 0); p.closePath();
-  g.fillStyle = css(c.f); g.fill(p);
-  g.save(); g.clip(p); g.strokeStyle = css(c.l, .5); g.lineWidth = .7; g.beginPath();
-  for (let i = -8; i <= 8; i++) { g.moveTo(i * 9, -70); g.lineTo(i * 9 + 34, -131); g.moveTo(i * 9, -70); g.lineTo(i * 9 - 34, -131); }
-  for (let i = -6; i <= 6; i++) { g.moveTo(i * 5, -134); g.lineTo(i * 5 + 12, -250); g.moveTo(i * 5, -134); g.lineTo(i * 5 - 12, -250); }
-  for (let i = -10; i <= 10; i++) { g.moveTo(i * 9, 0); g.lineTo(i * 9 + 30, -68); g.moveTo(i * 9, 0); g.lineTo(i * 9 - 30, -68); }
-  g.stroke(); g.restore();
-  box(-47, -68, 94, 8, c.f); box(-49, -70, 98, 2.4, c.f);
-  box(-27, -131, 54, 6, c.f); box(-28, -133, 56, 2, c.f);
-  box(-7.5, -276, 15, 9, c.f); poly([-6, -276, 6, -276, 3, -281, -3, -281], c.f); box(-1.1, -300, 2.2, 20, c.f);
-}};
-
-LM.bigben = { box: [-135, 112, 306], draw(c) {
-  // Parlamentet
-  box(-120, -58, 205, 58, c.f); box(-121, -64, 207, 6, c.f);
-  for (let x = -116; x <= 82; x += 11) poly([x - 1.6, -64, x + 1.6, -64, x, -75], c.f);
-  box(-133, -150, 30, 150, c.f);
-  for (const x of [-133, -103]) poly([x - 1, -150, x + 3, -150, x + 1, -164], c.f);
-  box(-119, -176, 1.6, 26, c.f);
-  box(-18, -104, 16, 46, c.f); poly([-19, -104, -1, -104, -10, -134], c.f);
-  g.fillStyle = css(c.l, .5);
-  for (let x = -114; x < 80; x += 7) { g.fillRect(x, -52, 2, 15); g.fillRect(x, -30, 2, 15); }
-  for (let y = -140; y < -10; y += 16) for (const x of [-127, -120, -113]) g.fillRect(x, y, 2, 10);
-  // Big Ben
-  box(84, -190, 22, 190, c.f);
-  g.fillStyle = css(c.l, .4); for (const x of [88, 95, 102]) g.fillRect(x - .5, -184, 1, 172);
-  box(81, -233, 28, 43, c.f);
-  dot([95, -211], 10.5, c.l); ring([95, -211], 10.5, 1.2, c.f);
-  seg([95, -211], [95, -219], 1.4, c.f); seg([95, -211], [101, -209], 1.4, c.f);
-  box(84, -253, 22, 20, c.f);
-  for (const x of [89, 95, 101]) roundArch(x, -237, 3.2, 12, css(c.l, .55));
-  poly([82, -253, 108, -253, 103, -269, 87, -269], c.f);
-  poly([87, -269, 103, -269, 95, -306], c.f);
-  for (const x of [81.5, 108.5]) { poly([x - 1.6, -233, x + 1.6, -233, x, -244], c.f); poly([x - 1.4, -253, x + 1.4, -253, x, -263], c.f); }
-}};
-
-LM.liberty = { box: [-150, 112, 240], draw(c) {
-  const sk = c.l;
-  const bl = [[-150, 14, 52], [-136, 10, 74], [-126, 14, 60], [-86, 12, 70], [-74, 10, 96], [-64, 16, 64], [-28, 12, 84], [-16, 14, 58], [-2, 10, 72], [8, 14, 46], [96, 16, 40]];
-  for (const [x, w, h] of bl) box(x, -h, w, h, sk);
-  box(-112, -88, 8, 88, sk);
-  box(-104, -118, 18, 118, sk); box(-101, -132, 12, 14, sk); box(-99, -141, 8, 9, sk); box(-96, -168, 2, 27, sk);
-  poly([-50, 0, -30, 0, -32.5, -150, -47.5, -150], sk); box(-40.8, -182, 1.6, 32, sk);
-  // Frihetsgudinnen
-  poly([12, 0, 102, 0, 94, -12, 20, -12], c.f);
-  poly([32, -12, 82, -12, 78, -78, 36, -78], c.f);
-  box(33, -84, 48, 6, c.f); box(39, -94, 36, 10, c.f);
-  g.fillStyle = css(c.l, .5); for (const x of [44, 52, 60, 68]) g.fillRect(x, -70, 3, 50);
-  poly([43, -94, 71, -94, 67, -120, 64, -150, 60, -166, 52, -166, 48, -150, 46, -120], c.f);
-  dot([56, -174], 6.5, c.f);
-  for (const a of [-160, -135, -112, -90, -68, -45, -20]) seg([56 + Math.cos(a * D2R) * 5, -174 + Math.sin(a * D2R) * 5], [56 + Math.cos(a * D2R) * 13, -174 + Math.sin(a * D2R) * 13], 2, c.f);
-  poly([49, -160, 54, -164, 47, -214, 43, -213], c.f);
-  box(42, -222, 5, 9, c.f); poly([39, -222, 50, -222, 48, -226, 41, -226], c.f);
-  g.fillStyle = '#F7C64B'; g.beginPath(); g.ellipse(44.5, -232, 3.3, 5.6, 0, 0, TAU); g.fill();
-  poly([62, -150, 68, -146, 72, -140, 66, -138], c.f);
-  poly([64, -152, 72, -148, 69, -132, 61, -136], c.f);
-}};
-
-LM.rio = { box: [-170, 170, 240], draw(c) {
-  g.fillStyle = css(c.l); g.beginPath(); g.moveTo(70, 0); g.quadraticCurveTo(78, -84, 102, -112);
-  g.quadraticCurveTo(122, -130, 140, -106); g.quadraticCurveTo(154, -76, 160, 0); g.closePath(); g.fill();
-  g.beginPath(); g.moveTo(34, 0); g.quadraticCurveTo(50, -38, 72, -42); g.quadraticCurveTo(88, -34, 94, 0); g.closePath(); g.fill();
-  seg([100, -110], [60, -40], .5, css(c.f, .5));
-  g.fillStyle = css(c.f); g.beginPath(); g.moveTo(-170, 0);
-  g.bezierCurveTo(-130, -25, -95, -70, -70, -110); g.bezierCurveTo(-50, -140, -30, -178, -14, -186);
-  g.lineTo(2, -186); g.bezierCurveTo(12, -176, 24, -140, 40, -100); g.bezierCurveTo(60, -55, 100, -15, 150, 0);
-  g.closePath(); g.fill();
-  box(-11, -193, 10, 8, c.f);
-  poly([-12, -193, 0, -193, -2.5, -227, -9.5, -227], c.f);
-  box(-27, -227.5, 42, 4.4, c.f);
-  dot([-6, -231.5], 3.4, c.f);
-}};
-
-LM.fuji = { box: [-190, 190, 200], draw(c) {
-  const m = new Path2D();
-  m.moveTo(-190, 0); m.bezierCurveTo(-120, -40, -70, -110, -34, -152); m.lineTo(-22, -160); m.lineTo(-10, -156);
-  m.lineTo(0, -161); m.lineTo(12, -157); m.lineTo(22, -152); m.bezierCurveTo(60, -110, 120, -40, 190, 0); m.closePath();
-  g.fillStyle = css(c.mount); g.fill(m);
-  g.save(); g.clip(m);
-  poly([-200, -200, 200, -200, 200, -120, 40, -114, 30, -126, 20, -110, 10, -124, 0, -106, -10, -122, -20, -104, -30, -120, -40, -110, -52, -124, -200, -126], c.snow);
-  g.restore();
-  // Chureito-pagoden
-  const cx = 112;
-  box(cx - 22, -8, 44, 8, c.f);
-  for (let i = 0; i < 5; i++) {
-    const bw = 30 - i * 3.6, yb = -8 - i * 21, rw = bw + 24 - i * 1.6, yt = yb - 14;
-    box(cx - bw / 2, yt, bw, 14, c.f);
-    g.fillStyle = css(c.l, .6); g.fillRect(cx - bw / 2 + 3, yt + 4, 3, 6); g.fillRect(cx + bw / 2 - 6, yt + 4, 3, 6);
-    g.fillStyle = css(c.f); g.beginPath(); g.moveTo(cx - rw / 2 - 2, yt - 3.5);
-    g.quadraticCurveTo(cx - rw / 2 + 5, yt + 1.6, cx - rw / 2 + 11, yt + 1.2); g.lineTo(cx + rw / 2 - 11, yt + 1.2);
-    g.quadraticCurveTo(cx + rw / 2 - 5, yt + 1.6, cx + rw / 2 + 2, yt - 3.5); g.lineTo(cx + bw / 2 - 1, yt - 7);
-    g.lineTo(cx - bw / 2 + 1, yt - 7); g.closePath(); g.fill();
-  }
-  box(cx - 1, -141, 2, 28, c.f);
-  for (let y = -136; y < -118; y += 3.5) box(cx - 2.6, y, 5.2, 1.2, c.f);
-  dot([cx, -142], 1.8, c.f);
-  const pink = ['#F4B9CB', '#EC9DB5', '#F7CCD8'];
-  for (const [x, y, r, i] of [[62, -18, 11, 0], [74, -28, 10, 1], [52, -28, 8, 2], [80, -14, 8, 2], [150, -16, 10, 0], [162, -26, 10, 1], [172, -14, 8, 2], [142, -26, 7, 2]]) {
-    if (i === 0) seg([x, 0], [x, y + 4], 2.2, c.f);
-    dot([x, y], r, pink[i]);
-  }
-}};
-
-LM.colosseum = { box: [-160, 160, 118], draw(c) {
-  const p = new Path2D();
-  p.moveTo(-160, 0); p.lineTo(-160, -104); p.quadraticCurveTo(-158, -111, -150, -112); p.lineTo(40, -112);
-  for (const [x, y] of [[50, -106], [60, -100], [70, -100], [80, -90], [92, -86], [100, -76], [112, -72], [122, -62], [134, -58], [146, -46], [160, -42]]) p.lineTo(x, y);
-  p.lineTo(160, 0); p.closePath();
-  g.fillStyle = css(c.f); g.fill(p);
-  g.save(); g.clip(p);
-  const N = 19;
-  for (const [yb, yt] of [[-2, -28], [-33, -58], [-63, -87]]) {
-    for (let k = 0; k < N; k++) {
-      const u = -1 + (k + .5) * 2 / N, x = 154 * Math.sin(u * Math.PI / 2), w = 11.5 * Math.cos(u * Math.PI / 2) + 1.2;
-      roundArch(x, yb, w, yb - yt, css(c.l, .7));
-    }
-  }
-  for (let k = 0; k < N; k += 2) {
-    const u = -1 + (k + .5) * 2 / N, x = 154 * Math.sin(u * Math.PI / 2), w = 5 * Math.cos(u * Math.PI / 2) + .8;
-    g.fillStyle = css(c.l, .6); g.fillRect(x - w / 2, -104, w, 6);
-  }
-  g.fillStyle = css(lighten(c.f, .25));
-  for (const y of [-31, -61, -90]) g.fillRect(-160, y, 320, 2.2);
-  g.restore();
-}};
-
-LM.giza = { box: [-190, 205, 150], draw() {
-  const lit = '#E8C088', shade = '#B88A57', cap = '#F2DCB4';
-  const pyr = (cx, half, h, top) => {
-    poly([cx - half, 0, cx, -h, cx + half * .25, 0], lit);
-    poly([cx + half * .25, 0, cx, -h, cx + half, 0], shade);
-    if (top) { poly([cx - half * top, -h * (1 - top), cx, -h, cx + half * top * .25, -h * (1 - top)], cap); poly([cx + half * top * .25, -h * (1 - top), cx, -h, cx + half * top, -h * (1 - top)], '#D9BC8E'); }
-    g.save(); g.beginPath(); g.moveTo(cx - half, 0); g.lineTo(cx, -h); g.lineTo(cx + half, 0); g.closePath(); g.clip();
-    g.strokeStyle = 'rgba(90,60,30,.12)'; g.lineWidth = .8; g.beginPath();
-    for (let y = -6; y > -h; y -= 7) { g.moveTo(cx - half, y); g.lineTo(cx + half, y); }
-    g.stroke(); g.restore();
-  };
-  pyr(172, 34, 58);
-  pyr(62, 88, 132, .12);
-  pyr(-72, 104, 142);
-  poly([-188, 0, -152, 0, -152, -9, -162, -12, -180, -11, -188, -7], '#9E7446');
-  poly([-158, -9, -149, -9, -148, -23, -152, -27, -157, -25, -159, -17], '#9E7446');
-}};
-
-LM.sydney = { box: [-196, 186, 128], draw(c) {
-  const br = c.l;
-  box(-196, -41, 152, 4, br);
-  g.strokeStyle = css(br); g.lineCap = 'butt';
-  g.lineWidth = 5; g.beginPath(); g.moveTo(-178, -37); g.quadraticCurveTo(-120, -150, -62, -37); g.stroke();
-  g.lineWidth = 2.4; g.beginPath(); g.moveTo(-172, -37); g.quadraticCurveTo(-120, -124, -68, -37); g.stroke();
-  g.lineWidth = .9; g.beginPath();
-  const qy = (t, y0, yc) => (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * yc + t * t * y0;
-  for (let i = 1; i < 12; i++) {
-    const t = i / 12, x1 = lerp(-178, -62, t), t2 = (x1 + 172) / 104;
-    const y1 = qy(t, -37, -150), y2 = t2 > 0 && t2 < 1 ? qy(t2, -37, -124) : -37;
-    g.moveTo(x1, y1); g.lineTo(x1, Math.max(y2, y1)); if (y2 < -41) { g.moveTo(x1, y2); g.lineTo(x1, -41); }
-  }
-  g.stroke(); g.lineCap = 'round';
-  box(-198, -60, 14, 60, br); box(-58, -60, 14, 60, br);
-  box(-196, -64, 10, 4, br); box(-56, -64, 10, 4, br);
-  // Operahuset
-  poly([-30, 0, 186, 0, 186, -14, -22, -14], c.podium);
-  const shell = (x0, x1, tx, ty) => {
-    g.fillStyle = css(c.shell); g.beginPath(); g.moveTo(x1, -14);
-    g.quadraticCurveTo(x1 - 3, ty * .5, tx, ty); g.quadraticCurveTo(x0 - 6, ty * .45, x0, -14); g.closePath(); g.fill();
-    g.fillStyle = css(c.shellShade); g.beginPath(); g.moveTo(x0, -14);
-    g.quadraticCurveTo(x0 - 6, ty * .45, tx, ty); g.lineTo((x0 + x1) / 2 - 4, -14); g.closePath(); g.fill();
-    g.strokeStyle = css(c.shellLine); g.lineWidth = .6; g.beginPath(); g.moveTo(tx, ty); g.lineTo((x0 + x1) / 2 + 6, -14); g.stroke();
-  };
-  shell(150, 186, 138, -58); shell(118, 166, 102, -84); shell(92, 142, 78, -100);
-  shell(50, 82, 40, -56); shell(22, 64, 10, -80); shell(-4, 42, -14, -96);
-  shell(-26, -6, -30, -40);
-}};
-
-LM.bergen = { box: [-150, 150, 172], draw(c) {
-  g.fillStyle = css(c.mount); g.beginPath(); g.moveTo(-150, 0); g.lineTo(-150, -82);
-  g.bezierCurveTo(-120, -132, -60, -168, 0, -162); g.bezierCurveTo(60, -156, 110, -122, 150, -96); g.lineTo(150, 0); g.closePath(); g.fill();
-  g.fillStyle = 'rgba(245,242,232,.8)';
-  for (let i = 0; i < 46; i++) { const x = -146 + hash(i) * 292, y = -18 - hash(i + 50) * 70; g.fillRect(x, y, 2.2, 1.8); }
-  const cols = ['#B5462F', '#E2B34A', '#EEE7D5', '#9E3B2A', '#E7CF86', '#F1EEE6', '#C0582E', '#D8A844', '#B5462F'];
-  const hs = [62, 72, 58, 70, 64, 74, 60, 70, 64];
-  for (let i = 0; i < 9; i++) {
-    const w = 31, x = -140 + i * w, h = hs[i], gh = w * .62, cc = cols[i];
-    const lightHouse = hx(cc)[0] + hx(cc)[1] > 420;
-    box(x, -h, w, h, cc); poly([x, -h, x + w, -h, x + w / 2, -h - gh], cc);
-    g.strokeStyle = '#3A2A24'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - 1, -h + 1); g.lineTo(x + w / 2, -h - gh); g.lineTo(x + w + 1, -h + 1); g.stroke();
-    seg([x, -h], [x, 0], .6, 'rgba(40,28,24,.5)');
-    const wc = lightHouse ? '#3E3A38' : '#F4EFE4';
-    for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) box(x + 5 + k * 8.5, -h + 7 + r * 13.5, 4, 6, wc);
-    box(x + w / 2 - 2.5, -h - gh * .55, 5, 6.5, wc);
-    box(x, -12, w, 12, 'rgba(30,20,16,.28)'); box(x + w / 2 - 3, -10, 6, 10, '#2E2420');
-  }
-}};
-
-LM.goldengate = { box: [-225, 225, 172], draw(c) {
-  g.fillStyle = css(c.l); g.beginPath(); g.moveTo(40, 0); g.quadraticCurveTo(110, -72, 180, -64);
-  g.quadraticCurveTo(212, -58, 225, -44); g.lineTo(225, 0); g.closePath(); g.fill();
-  g.beginPath(); g.moveTo(-225, 0); g.quadraticCurveTo(-200, -32, -168, -28); g.quadraticCurveTo(-148, -24, -136, 0); g.closePath(); g.fill();
-  const cab = (x0, y0, x1, y1, cx, cy, step) => {
-    g.strokeStyle = css(c.f); g.lineWidth = 2.2; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke();
-    g.lineWidth = .6; g.beginPath();
-    for (let t = step; t < 1; t += step) {
-      const x = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cx + t * t * x1, y = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * cy + t * t * y1;
-      if (y < -46) { g.moveTo(x, y); g.lineTo(x, -44); }
+  function wheel(c, R, rot, col) {
+    ring(c, R - 1.2, 2.4, col);
+    g.lineWidth = 1; g.strokeStyle = col; g.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = rot + i * TAU / 3;
+      g.moveTo(c[0], c[1]); g.lineTo(c[0] + Math.cos(a) * (R - 2.4), c[1] + Math.sin(a) * (R - 2.4));
     }
     g.stroke();
+  }
+  // Det som er under vannflaten tones mot bakgrunnen.
+  function underVann(wl, t, bolge) {
+    g.save(); g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = P.vann; g.beginPath(); g.moveTo(-200, wl);
+    for (let x = -200; x <= 200; x += 8) g.lineTo(x, wl + Math.sin(x * .09 + t * 5) * bolge);
+    g.lineTo(200, 120); g.lineTo(-200, 120); g.closePath(); g.fill(); g.restore();
+  }
+
+  /* ================================================================
+     IDRETTER
+     ================================================================ */
+  const SPORTS = {};
+
+  /* ---- Løping ---- */
+  SPORTS.run = {
+    name: 'Løping', ground: 'land', speed: 1,
+    draw(A) {
+      const th = A.t / .68 * TAU;
+      const hip = [0, -53.4 + 2.2 * Math.cos(2 * th)];
+      const lean = 11 + 1.5 * Math.cos(2 * th);
+      const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5);
+      const hc = add(neck, up(lean + 6), 9.2);
+      const leg = ph => {
+        const a = 10 + 36 * Math.sin(ph), f = 16 + 100 * Math.pow(Math.max(0, Math.cos(ph + .3)), 2);
+        const k = limb(hip, a, 26); return [k, limb(k, a - f, 26)];
+      };
+      const arm = ph => {
+        const a = 4 - 42 * Math.sin(ph), f = 88 - 16 * Math.sin(ph);
+        const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
+      };
+      const ln = leg(th), lf = leg(th + Math.PI), an = arm(th), af = arm(th + Math.PI);
+      drawArm(sh, af[0], af[1], true);
+      drawLeg(hip, lf[0], lf[1], true);
+      drawTorso(hip, neck, A);
+      drawLeg(hip, ln[0], ln[1], false);
+      drawHead(neck, hc, A, { sway: Math.sin(2 * th - .6) });
+      drawArm(sh, an[0], an[1], false);
+    }
   };
-  cab(-106, -165, 106, -165, 0, 65, 1 / 30);
-  cab(-114, -165, -225, -46, -170, -84, 1 / 14); cab(114, -165, 225, -46, 170, -84, 1 / 14);
-  box(-225, -44, 450, 4.6, c.f); box(-225, -39.4, 450, 3, c.d);
-  for (const tx of [-110, 110]) {
-    poly([tx - 6, 0, tx + 6, 0, tx + 4.5, -172, tx - 4.5, -172], c.f);
-    for (const y of [-62, -100, -134, -160]) box(tx - 5.5, y, 11, 2, c.d);
-    box(tx - 5.5, -176, 11, 4, c.f);
-  }
-}};
 
-LM.taj = { box: [-160, 160, 216], draw(c) {
-  box(-156, -12, 312, 12, c.f);
-  for (const x of [-140, 140]) {
-    poly([x - 6, -12, x + 6, -12, x + 4.5, -150, x - 4.5, -150], c.f);
-    box(x - 8, -58, 16, 3, c.f); box(x - 7, -100, 14, 3, c.f); box(x - 6.5, -140, 13, 3, c.f);
-    box(x - 5, -158, 10, 8, c.f);
-    g.fillStyle = css(c.f); g.beginPath(); g.arc(x, -158, 6, Math.PI, 0); g.fill();
-    seg([x, -163], [x, -171], 1.2, c.f);
-  }
-  poly([-70, -12, 70, -12, 70, -96, 60, -106, -60, -106, -70, -96], c.f);
-  pointArch(0, -12, 34, 82, c.l);
-  pointArch(0, -12, 16, 44, css(c.d));
-  for (const x of [-46, 46]) { pointArch(x, -16, 15, 34, css(c.l, .75)); pointArch(x, -56, 15, 34, css(c.l, .75)); }
-  box(-30, -124, 60, 18, c.f);
-  g.fillStyle = css(c.f); g.beginPath(); g.moveTo(-33, -124);
-  g.bezierCurveTo(-52, -146, -42, -178, -6, -192); g.quadraticCurveTo(0, -196, 6, -192);
-  g.bezierCurveTo(42, -178, 52, -146, 33, -124); g.closePath(); g.fill();
-  seg([0, -194], [0, -212], 1.8, c.f); dot([0, -203], 2, c.f);
-  for (const x of [-52, 52]) {
-    box(x - 9, -118, 18, 12, c.f);
-    g.fillStyle = css(c.f); g.beginPath(); g.moveTo(x - 10, -118);
-    g.bezierCurveTo(x - 13, -126, x - 8, -136, x, -140); g.bezierCurveTo(x + 8, -136, x + 13, -126, x + 10, -118); g.closePath(); g.fill();
-    seg([x, -140], [x, -147], 1.2, c.f);
-  }
-}};
-
-LM.pisa = { box: [-140, 80, 196], draw(c) {
-  box(-138, -48, 108, 48, c.f);
-  poly([-138, -48, -30, -48, -36, -62, -132, -62], c.f);
-  poly([-142, -48, -126, -48, -126, -74, -134, -86, -142, -74], c.f);
-  box(-72, -80, 24, 18, c.f);
-  g.fillStyle = css(c.f); g.beginPath(); g.arc(-60, -80, 13, Math.PI, 0); g.fill();
-  box(-62, -98, 4, 6, c.f);
-  for (let x = -132; x < -34; x += 8) roundArch(x, -30, 4, 14, css(c.l, .6));
-  g.save(); g.translate(40, 0); g.rotate(5.5 * D2R);
-  box(-19, -150, 38, 150, c.f);
-  box(-14, -174, 28, 24, c.f);
-  poly([-15, -174, 15, -174, 10, -181, -10, -181], c.f);
-  g.fillStyle = css(c.l, .9);
-  for (let i = 0; i <= 6; i++) g.fillRect(-20, -26 - i * 21, 40, 1.6);
-  for (let i = 0; i < 6; i++) for (let k = -2; k <= 2; k++) roundArch(k * 7.4, -30 - i * 21, 4.2, 14, css(c.l, .55));
-  for (let k = -1; k <= 1; k++) roundArch(k * 8, -155, 4.4, 14, css(c.l, .7));
-  for (let k = -2; k <= 2; k++) roundArch(k * 7.4, -5, 4.2, 16, css(c.l, .45));
-  g.restore();
-}};
-
-LM.tromso = { box: [-150, 150, 180], draw(c) {
-  const m = new Path2D();
-  const pts = [-150, 0, -150, -60, -112, -100, -88, -80, -44, -128, 8, -176, 40, -148, 72, -118, 112, -96, 150, -72, 150, 0];
-  m.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) m.lineTo(pts[i], pts[i + 1]); m.closePath();
-  g.fillStyle = css(c.mount); g.fill(m);
-  g.save(); g.clip(m);
-  poly([-60, -200, 70, -200, 70, -128, 52, -134, 40, -124, 28, -140, 16, -128, 4, -146, -8, -130, -20, -144, -32, -122, -46, -126, -60, -112], c.snow);
-  poly([-120, -100, -100, -100, -96, -90, -104, -86, -112, -94], c.snow);
-  g.restore();
-  const cx = -28;
-  for (let i = 7; i >= 0; i--) {
-    const ax = cx + i * 10.5, ay = -110 + i * 8.6, hb = 34 - i * 1.3;
-    poly([ax - hb, 0, ax, ay, ax + hb, 0], mix(c.panel, c.mount, i / 7 * .6));
-    if (i > 0) { seg([ax, ay], [ax + hb, 0], 1.3, css(c.glow, .85)); }
-  }
-  const win = new Path2D(); win.moveTo(cx - 21, -8); win.lineTo(cx, -94); win.lineTo(cx + 21, -8); win.closePath();
-  const gr = g.createLinearGradient(0, -94, 0, -8); gr.addColorStop(0, '#FFE39A'); gr.addColorStop(.6, '#FFB14E'); gr.addColorStop(1, '#F07A3A');
-  g.fillStyle = gr; g.fill(win);
-  g.save(); g.clip(win); g.strokeStyle = 'rgba(80,40,20,.45)'; g.lineWidth = .8; g.beginPath();
-  for (let x = cx - 18; x <= cx + 18; x += 4.5) { g.moveTo(x, -96); g.lineTo(x, -8); }
-  for (let y = -80; y < -8; y += 16) { g.moveTo(cx - 22, y); g.lineTo(cx + 22, y); }
-  g.stroke(); g.restore();
-  box(cx - 44, -9, 88, 9, c.f);
-  box(cx - 6, -8, 12, 8, '#FFC56E');
-}};
-
-LM.dubai = { box: [-150, 150, 330], draw(c) {
-  const sk = c.l;
-  const bl = [[-150, 16, 60], [-132, 12, 92], [-118, 18, 72], [-98, 14, 116], [-82, 10, 78], [-70, 16, 134], [-52, 12, 96], [38, 14, 106], [54, 18, 146], [74, 12, 92], [88, 16, 124], [106, 12, 74], [120, 16, 98], [138, 12, 66]];
-  for (const [x, w, h] of bl) box(x, -h, w, h, sk);
-  const tiers = [[-22, 22, 0, -60], [-20, 18, -60, -108], [-16, 17, -108, -148], [-14, 13, -148, -184], [-10, 11, -184, -214], [-8, 7, -214, -240], [-5, 5, -240, -262], [-3, 3, -262, -284]];
-  for (const [l, r, y0, y1] of tiers) box(l, y1, r - l, y0 - y1, c.f);
-  poly([-2.2, -284, 2.2, -284, 0, -330], c.f);
-  g.fillStyle = css(c.l, .5); for (const x of [-9, 0, 9]) g.fillRect(x - .4, -250, .8, 244);
-  let n = 0;
-  for (const [x, w, h] of bl) {
-    for (let y = -h + 5; y < -4; y += 6) for (let xx = x + 2; xx < x + w - 2; xx += 4) {
-      n++; if (hash(n * 1.7) > .58) { g.fillStyle = `rgba(255,212,130,${(.55 + hash(n) * .4).toFixed(2)})`; g.fillRect(xx, y, 1.6, 2); }
+  /* ---- Sykling ---- */
+  SPORTS.bike = {
+    name: 'Sykling', ground: 'land', speed: 2.1,
+    draw(A) {
+      const cad = A.t / .6 * TAU, R = 17.5, rot = A.dist / R;
+      const rear = [-29, -R], front = [30, -R], bb = [0, -12.5];
+      const hip = [-12, -53], lean = 57 + 1.2 * Math.sin(cad * 2);
+      const tv = up(lean), neck = add(hip, tv, 28.5), sh = add(hip, tv, 25);
+      const hc = add(neck, [6, -5.2]);
+      const cr = 8.5;
+      const pn = [bb[0] + Math.cos(cad) * cr, bb[1] + Math.sin(cad) * cr];
+      const pf = [bb[0] - Math.cos(cad) * cr, bb[1] - Math.sin(cad) * cr];
+      const hood = [28, -47.2];
+      const kn = ik(hip, pn, 26, 25, -1), kf = ik(hip, pf, 26, 25, -1);
+      const en = ik(sh, hood, 16, 14.5, 1), ef = ik(sh, [hood[0] - 1.2, hood[1] - .8], 16, 14.5, 1);
+      const u = P.utstyr;
+      wheel(rear, R, rot, u); wheel(front, R, rot, u);
+      seg(bb, pf, 2.2, P.utstyrFjern);
+      drawLeg(hip, kf[0], kf[1], true, { footDir: [1, .1] });
+      drawArm(sh, ef[0], ef[1], true);
+      const seatC = [-8.5, -39], htTop = [21, -42.5], htBot = [23.5, -33];
+      seg(rear, bb, 2.4, u); seg(rear, seatC, 2.2, u);
+      seg(bb, seatC, 2.8, u); seg(seatC, htTop, 2.8, u); seg(bb, htBot, 3, u);
+      seg(htTop, htBot, 3.2, u); seg(htBot, front, 2.6, u);
+      seg(seatC, [-10.5, -48], 2.2, u); seg([-15.5, -49.4], [-6.5, -49.9], 3, u);
+      seg(htTop, [25, -45.5], 2.4, u);
+      g.strokeStyle = u; g.lineWidth = 2.2; g.beginPath(); g.moveTo(25, -45.5); g.lineTo(28.5, -46.8);
+      g.quadraticCurveTo(32.5, -45.5, 31.2, -40.5); g.quadraticCurveTo(30.2, -37.8, 27.2, -38.4); g.stroke();
+      drawTorso(hip, neck, A);
+      drawLeg(hip, kn[0], kn[1], false, { footDir: [1, .1] });
+      seg(bb, pn, 2.4, u);
+      drawHead(neck, hc, A, { sway: Math.sin(cad) * .4 });
+      drawArm(sh, en[0], en[1], false, false);
     }
-  }
-  for (let y = -250; y < -8; y += 7) for (let xx = -18; xx < 18; xx += 5) {
-    n++; if (hash(n * 2.3) > .7 && xx > -20 + (y < -150 ? 8 : 0) && xx < 18 - (y < -150 ? 8 : 0)) { g.fillStyle = 'rgba(255,214,140,.7)'; g.fillRect(xx, y, 1.4, 1.8); }
-  }
-}};
+  };
 
-LM.greatwall = { box: [-200, 200, 128], draw(c) {
-  const far = x => -92 - 16 * Math.sin(x * .012 + 2) - 8 * Math.sin(x * .031);
-  const ridge = x => -58 - 24 * Math.sin((x + 200) / 400 * Math.PI * 2.1 + .4) - 8 * Math.sin(x * .045 + 1.2);
-  const fill = (fn, c1) => { g.fillStyle = css(c1); g.beginPath(); g.moveTo(-200, 0); for (let x = -200; x <= 200; x += 4) g.lineTo(x, fn(x)); g.lineTo(200, 0); g.closePath(); g.fill(); };
-  fill(far, c.l);
-  fill(x => ridge(x) + 3, c.f);
-  g.fillStyle = css(c.wall); g.beginPath();
-  for (let x = -200; x <= 200; x += 4) { const y = ridge(x) - 8; x === -200 ? g.moveTo(x, y) : g.lineTo(x, y); }
-  for (let x = 200; x >= -200; x -= 4) g.lineTo(x, ridge(x) + 2);
-  g.closePath(); g.fill();
-  for (let x = -198; x <= 198; x += 5) box(x, ridge(x) - 11.5, 2.6, 4, c.wall);
-  g.strokeStyle = css(darken(c.wall, .3)); g.lineWidth = .8; g.beginPath();
-  for (let x = -200; x <= 200; x += 4) { const y = ridge(x) - 3; x === -200 ? g.moveTo(x, y) : g.lineTo(x, y); }
-  g.stroke();
-  for (const x of [-152, -64, 24, 118, 176]) {
-    const y = ridge(x);
-    box(x - 8, y - 27, 16, 27, c.tower);
-    for (let k = 0; k < 4; k++) box(x - 8 + k * 4.6, y - 30.5, 2.6, 3.5, c.tower);
-    roundArch(x, y - 12, 4, 8, css(darken(c.tower, .45)));
-  }
-}};
+  /* ---- Langrenn (klassisk diagonalgang) ---- */
+  SPORTS.ski = {
+    name: 'Langrenn', ground: 'land', speed: 1.3,
+    draw(A) {
+      const th = A.t / 1.15 * TAU;
+      const hip = [0, -49.5 + 1.6 * Math.cos(2 * th)];
+      const lean = 19 + 5 * Math.cos(2 * th + .6);
+      const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5), hc = add(neck, up(lean + 2), 9);
+      const foot = (ph, dy) => {
+        const lift = 7.5 * Math.pow(Math.max(0, Math.cos(ph + Math.PI / 2 - .55)), 6);
+        return { a: [21 * Math.sin(ph), -3 - lift + dy], lift };
+      };
+      const arm = ph => {
+        const a = 12 - 55 * Math.sin(ph), f = 18 - 12 * Math.sin(ph);
+        const e = limb(sh, a, 16), h = limb(e, a + f, 14.5);
+        const Lp = 72;
+        let b = Math.acos(clamp(-h[1] / Lp, 0, 1));
+        if (Math.cos(ph) < 0) {
+          const s = ((((ph - Math.PI / 2) % TAU) + TAU) % TAU) / Math.PI;
+          b += .5 * Math.sin(Math.PI * clamp(s, 0, 1));
+        }
+        return { e, h, tip: [h[0] - Math.sin(b) * Lp, h[1] + Math.cos(b) * Lp] };
+      };
+      const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
+      const kn = ik(hip, fn.a, 26, 25.5, -1), kf = ik(hip, ff.a, 26, 25.5, -1);
+      const an = arm(th), af = arm(th + Math.PI);
+      const utstyr = far => far ? P.utstyrFjern : P.utstyr;
+      const ski = (f, far) => {
+        const b = [f.a[0], f.a[1] + 3], r = f.lift * 1.1 * D2R, d = [Math.cos(r), Math.sin(r)];
+        const tip = add(b, d, 48), tail = add(b, d, -42), c = utstyr(far);
+        const knekk = add(tip, d, -6);
+        seg(tail, knekk, 2.2, c);
+        g.strokeStyle = c; g.lineWidth = 2.2; g.beginPath(); g.moveTo(knekk[0], knekk[1]);
+        g.quadraticCurveTo(tip[0], tip[1], tip[0] + 1.5, tip[1] - 3.2); g.stroke();
+      };
+      const boot = (f, far) => seg([f.a[0] - 2, f.a[1] + 1], [f.a[0] + 5.5, f.a[1] + 1.2], 5, farge(far));
+      const pole = (p, far) => {
+        const c = utstyr(far);
+        seg(p.h, p.tip, 1.7, c);
+        const d = norm(sub(p.tip, p.h)), q = add(p.h, d, 64), n = [-d[1], d[0]];
+        seg(add(q, n, -2.4), add(q, n, 2.4), 1.3, c);
+      };
+      pole(af, true); ski(ff, true);
+      drawLeg(hip, kf[0], kf[1], true, { shoe: false }); boot(ff, true);
+      drawArm(sh, af.e, af.h, true);
+      drawTorso(hip, neck, A);
+      ski(fn, false);
+      drawLeg(hip, kn[0], kn[1], false, { shoe: false }); boot(fn, false);
+      drawHead(neck, hc, A, { sway: Math.sin(2 * th) * .7 });
+      drawArm(sh, an.e, an.h, false); pole(an, false);
+    }
+  };
 
-/* ================================================================
-   STEDER – himmel, lys, bakgrunnslag, landemerke
-   ================================================================ */
-const PLACES = [
-  { id: 'oslo', lm: 'holmenkollen', city: 'Oslo, Norge', name: 'Holmenkollbakken', coord: '59,964° N 10,668° Ø',
-    sky: ['#86B6E3', '#C4DDF1', '#F3E7DC'], sun: { x: .8, y: .28, r: 22, c: '#FFF6E0' }, back: 'hills', hills: ['#AFC2D6', '#8FA6BF'],
-    far: '#E6EDF3', lmc: '#34465F', x: { snow: '#EEF3F8' }, cloud: ['#FFFFFF', .85], amb: ['#FFFFFF', 0] },
-  { id: 'paris', lm: 'eiffel', city: 'Paris, Frankrike', name: 'Eiffeltårnet', coord: '48,858° N 2,294° Ø',
-    sky: ['#79ACDB', '#BCD7EE', '#F7E2CA'], sun: { x: .18, y: .26, r: 20, c: '#FFF1D6' }, back: 'city', hills: ['#B7C6D6', '#9AABBD'],
-    far: '#A5B98C', lmc: '#3C4662', cloud: ['#FFFFFF', .85], amb: ['#FFFFFF', 0] },
-  { id: 'london', lm: 'bigben', city: 'London, Storbritannia', name: 'Big Ben', coord: '51,501° N 0,125° V',
-    sky: ['#8A9EB4', '#B8C4D0', '#DCE0DE'], sun: null, back: 'city', hills: ['#A6B0BB', '#8E99A6'],
-    far: '#8E9C84', lmc: '#2F3947', cloud: ['#EEF1F4', .9], amb: ['#C9D2DC', .12] },
-  { id: 'nyc', lm: 'liberty', city: 'New York, USA', name: 'Frihetsgudinnen', coord: '40,689° N 74,045° V',
-    sky: ['#3F4A8C', '#D9829A', '#FAC48C'], sun: { x: .26, y: .8, r: 30, c: '#FFD49A' }, back: 'city', hills: ['#8F7299', '#735E8B'],
-    far: '#6E6F9E', farWater: true, lmc: '#2A2442', cloud: ['#FFC2B0', .6], amb: ['#FF9E7A', .14] },
-  { id: 'rio', lm: 'rio', city: 'Rio de Janeiro, Brasil', name: 'Kristus-statuen', coord: '22,952° S 43,211° V',
-    sky: ['#2A83C4', '#86CBE8', '#FBE4A8'], sun: { x: .84, y: .3, r: 24, c: '#FFF4C8' }, back: 'mount', hills: ['#78A7AE', '#5A8F98'],
-    far: '#2F8DB2', farWater: true, lmc: '#2A4A40', cloud: ['#FFFFFF', .8], amb: ['#FFE9B0', .06] },
-  { id: 'fuji', lm: 'fuji', city: 'Fujiyoshida, Japan', name: 'Fuji og Chureito-pagoden', coord: '35,501° N 138,801° Ø',
-    sky: ['#9DBCE6', '#E6D5EA', '#FCEAE1'], sun: { x: .82, y: .36, r: 18, c: '#FFF3EA' }, back: 'hills', hills: ['#BDB8D4', '#A39FC2'],
-    far: '#C4B6C8', lmc: '#6E2A2C', x: { mount: '#7489B0', snow: '#F7F8FC' }, cloud: ['#FFFFFF', .7], amb: ['#FFD8E0', .06] },
-  { id: 'roma', lm: 'colosseum', city: 'Roma, Italia', name: 'Colosseum', coord: '41,890° N 12,492° Ø',
-    sky: ['#6CA6DA', '#B4D6EE', '#F5DAB0'], sun: { x: .84, y: .22, r: 22, c: '#FFF3D0' }, back: 'city', hills: ['#BEC4B4', '#A2AC98'],
-    far: '#C6B386', lmc: '#80583E', cloud: ['#FFFFFF', .85], amb: ['#FFE2B8', .06] },
-  { id: 'giza', lm: 'giza', city: 'Giza, Egypt', name: 'Pyramidene i Giza', coord: '29,979° N 31,134° Ø',
-    sky: ['#5B9ED6', '#A6CFEA', '#F2DCAE'], sun: { x: .82, y: .2, r: 26, c: '#FFF8E2' }, back: 'dunes', hills: ['#E3CA9E', '#D2B283'],
-    far: '#E2C08A', lmc: '#B07C47', cloud: ['#FFFFFF', .5], amb: ['#FFE0A8', .08] },
-  { id: 'sydney', lm: 'sydney', city: 'Sydney, Australia', name: 'Operahuset', coord: '33,857° S 151,215° Ø',
-    sky: ['#1C78C4', '#66B4E6', '#CBE8F6'], sun: { x: .86, y: .18, r: 22, c: '#FFFBEA' }, back: 'city', hills: ['#8AAAC4', '#6D92B0'],
-    far: '#1F6FA6', farWater: true, lmc: '#5C7896', x: { podium: '#C9A986', shell: '#F4F2EC', shellShade: '#CDD3DC', shellLine: '#B7BFCC' }, cloud: ['#FFFFFF', .9], amb: ['#FFFFFF', 0] },
-  { id: 'bergen', lm: 'bergen', city: 'Bergen, Norge', name: 'Bryggen', coord: '60,397° N 5,324° Ø',
-    sky: ['#7890AA', '#B5C4D2', '#E0E3DC'], sun: null, back: 'mount', hills: ['#8A9E98', '#6E857D'],
-    far: '#4F7486', farWater: true, lmc: '#3E5A4C', x: { mount: '#4A6354' }, cloud: ['#EEF1F3', .85], amb: ['#C8D4DC', .1] },
-  { id: 'sf', lm: 'goldengate', city: 'San Francisco, USA', name: 'Golden Gate', coord: '37,820° N 122,478° V',
-    sky: ['#E9A776', '#F4CFA4', '#F6E6D2'], sun: { x: .7, y: .62, r: 28, c: '#FFE4B8' }, back: 'hills', hills: ['#C3A597', '#A68B7E'],
-    far: '#7C8FA2', farWater: true, lmc: '#C0392B', cloud: ['#FFF1E2', .75], amb: ['#FFB889', .12] },
-  { id: 'agra', lm: 'taj', city: 'Agra, India', name: 'Taj Mahal', coord: '27,175° N 78,042° Ø',
-    sky: ['#6A6CA6', '#E3A1B3', '#F9D5B2'], sun: { x: .5, y: .74, r: 26, c: '#FFE3C4' }, back: 'hills', hills: ['#B696AB', '#9C7E95'],
-    far: '#A7A48E', lmc: '#4B3658', cloud: ['#FFD2D8', .55], amb: ['#FFB6B0', .1] },
-  { id: 'pisa', lm: 'pisa', city: 'Pisa, Italia', name: 'Det skjeve tårnet', coord: '43,723° N 10,397° Ø',
-    sky: ['#76B1E2', '#C0DBF0', '#F1E4C9'], sun: { x: .16, y: .24, r: 21, c: '#FFF6DE' }, back: 'hills', hills: ['#B4C4CC', '#98ABB6'],
-    far: '#9DB07F', lmc: '#555A6E', cloud: ['#FFFFFF', .85], amb: ['#FFFFFF', 0] },
-  { id: 'tromso', lm: 'tromso', city: 'Tromsø, Norge', name: 'Ishavskatedralen', coord: '69,648° N 18,988° Ø',
-    sky: ['#070E24', '#12244A', '#2B4868'], night: 1, aurora: 1, moon: { x: .84, y: .18, r: 10, c: '#EEF2FF' }, back: 'mount', hills: ['#2A3A56', '#1D2A43'],
-    far: '#9AADC8', lmc: '#101828', x: { mount: '#22314D', snow: '#9FB2CB', panel: '#C6D0E0', glow: '#FFC56E' }, cloud: ['#5A6E92', .25], amb: ['#1B2A55', .42] },
-  { id: 'dubai', lm: 'dubai', city: 'Dubai, De forente arabiske emirater', name: 'Burj Khalifa', coord: '25,197° N 55,274° Ø',
-    sky: ['#1B2757', '#7B5B8F', '#F2A36E'], night: .35, sun: { x: .22, y: .88, r: 30, c: '#FFB36B' }, back: 'dunes', hills: ['#94707F', '#765A72'],
-    far: '#C9A27E', lmc: '#171A2E', cloud: ['#F7B08A', .45], amb: ['#E08A6A', .18] },
-  { id: 'beijing', lm: 'greatwall', city: 'Beijing, Kina', name: 'Den kinesiske mur', coord: '40,432° N 116,570° Ø',
-    sky: ['#98B3C6', '#D0DAD6', '#EADFC7'], sun: { x: .8, y: .32, r: 20, c: '#FFF2D8' }, back: 'mount', hills: ['#A5B2A0', '#8A9A84'],
-    far: '#8D9A74', lmc: '#5E7058', x: { wall: '#8C7C60', tower: '#7B6B50' }, cloud: ['#FFFFFF', .6], amb: ['#F0E0C0', .06] },
-];
+  /* ---- Svømming (crawl) ---- */
+  SPORTS.swim = {
+    name: 'Svømming', ground: 'water', speed: .55,
+    draw(A) {
+      const T = 1.35, q = fract(A.t / T), th = q * TAU, wl = -7;
+      const hip = [-16, wl + 4.2 + .5 * Math.sin(2 * th)];
+      const tv = up(85.5), neck = add(hip, tv, 28), sh = add(hip, tv, 25);
+      const breathe = (q > .45 && q < .8) ? Math.sin((q - .45) / .35 * Math.PI) : 0;
+      const hc = add(neck, [8.6, -1.2 - 2.4 * breathe]);
+      const leg = ph => {
+        const a = -91 + 9 * Math.sin(3 * ph), f = 8 + 16 * Math.max(0, Math.sin(3 * ph + 1.2));
+        const k = limb(hip, a, 26); return [k, limb(k, a - f, 25)];
+      };
+      const arm = qq => {
+        qq = fract(qq);
+        const a = 90 - 360 * qq;
+        const f = qq < .5 ? -38 * Math.sin(Math.PI * qq / .5) : 105 * Math.sin(Math.PI * (qq - .5) / .5);
+        const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
+      };
+      const ln = leg(th), lf = leg(th + Math.PI), an = arm(q), af = arm(q + .5);
+      drawArm(sh, af[0], af[1], true);
+      drawLeg(hip, lf[0], lf[1], true, { toe: true });
+      drawTorso(hip, neck, A);
+      drawLeg(hip, ln[0], ln[1], false, { toe: true });
+      drawHead(neck, hc, A, { rot: Math.PI / 2 - .3 * breathe, badehette: true });
+      drawArm(sh, an[0], an[1], false);
+      underVann(wl, A.t, 1.1);
+    }
+  };
 
-/* ---------- utøvere: drakter og variasjon ---------- */
-const SKINS = ['#F1C6A3', '#DDA47C', '#B97A52', '#8A573A', '#5F3B28', '#E8B48E'];
-const HAIRS = ['#2A1C14', '#6E4424', '#C99243', '#141414', '#8B4A2B', '#3B2A1E'];
-const KITS = {
-  run: {
-    m: { top: '#2F7BDA', bottom: '#1C2434', shoe: '#F4F4F2', sleeves: 'none', legs: 'shorts', shortLen: .6, waist: .2 },
-    f: { top: '#FF6A4A', bottom: '#222A3C', shoe: '#FFFFFF', sleeves: 'none', legs: 'shorts', shortLen: .5, waist: .2 } },
-  bike: {
-    f: { top: '#F2C12E', bottom: '#1B1F2A', shoe: '#FFFFFF', sleeves: 'short', legs: 'shorts', shortLen: .82, waist: .22, hat: 'helmet', gear: '#E0413A', gear2: '#FFFFFF', glasses: 1 },
-    m: { top: '#18A17B', bottom: '#1B1F2A', shoe: '#1B1F2A', sleeves: 'short', legs: 'shorts', shortLen: .82, waist: .22, hat: 'helmet', gear: '#2C6BE0', gear2: '#F4F4F4', glasses: 1 } },
-  ski: {
-    m: { top: '#D8342F', bottom: '#1D2C57', shoe: '#1D2C57', sleeves: 'long', legs: 'tights', waist: .24, hat: 'beanie', gear: '#1D2C57', ski: '#D8342F' },
-    f: { top: '#1D2C57', bottom: '#D8342F', shoe: '#1D2C57', sleeves: 'long', legs: 'tights', waist: .24, hat: 'band', gear: '#FFFFFF', ski: '#1D2C57' } },
-  swim: {
-    f: { top: '#1E2A46', bottom: '#1E2A46', sleeves: 'none', legs: 'shorts', shortLen: .12, waist: 0, hat: 'cap', gear: '#F2574C' },
-    m: { top: '#1E2A46', bottom: '#1E2A46', torsoSkin: 1, sleeves: 'none', legs: 'shorts', shortLen: .72, waist: .22, hat: 'cap', gear: '#FFD23F' } },
-  row: {
-    m: { top: '#6B41BC', bottom: '#6B41BC', shoe: '#1B1F2A', sleeves: 'none', legs: 'shorts', shortLen: .5, waist: 0, boat: '#F3EFE4', blade: '#6B41BC' },
-    f: { top: '#0F8C8A', bottom: '#0F8C8A', shoe: '#1B1F2A', sleeves: 'none', legs: 'shorts', shortLen: .5, waist: 0, boat: '#F6D34A', blade: '#0F8C8A' } },
-  skate: {
-    f: { top: '#1552C9', bottom: '#1552C9', shoe: '#161B26', sleeves: 'long', legs: 'tights', waist: 0, hat: 'hood' },
-    m: { top: '#E2472F', bottom: '#E2472F', shoe: '#161B26', sleeves: 'long', legs: 'tights', waist: 0, hat: 'hood' } },
-  wheel: {
-    m: { top: '#F29A1E', bottom: '#1F2638', shoe: '#1F2638', sleeves: 'short', legs: 'tights', waist: .2, hat: 'aero', gear: '#1B2030', glove: '#1B2030', frame: '#A9B4C4' },
-    f: { top: '#8E44E0', bottom: '#1F2638', shoe: '#1F2638', sleeves: 'short', legs: 'tights', waist: .2, hat: 'aero', gear: '#F4F4F4', glove: '#1B2030', frame: '#A9B4C4' } },
-};
-// Løping vises alltid både som mann og kvinne. De andre bytter kjønn hver runde.
-const ACTS = [
-  { sport: 'run', gender: 'm', fixed: true }, { sport: 'run', gender: 'f', fixed: true },
-  { sport: 'bike', gender: 'f' }, { sport: 'ski', gender: 'm' }, { sport: 'swim', gender: 'f' },
-  { sport: 'row', gender: 'm' }, { sport: 'skate', gender: 'f' }, { sport: 'wheel', gender: 'm' },
-];
+  /* ---- Roing (singlesculler – roeren ser bakover) ---- */
+  SPORTS.row = {
+    name: 'Roing', ground: 'water', speed: 1.35,
+    draw(A) {
+      const T = 1.9, u = fract(A.t / T), wl = -6;
+      let legs, back, arms;
+      if (u < .42) { const d = u / .42; legs = smooth(0, .62, d); back = smooth(.28, .85, d); arms = smooth(.58, 1, d); }
+      else { const r = (u - .42) / .58; arms = 1 - smooth(0, .3, r); back = 1 - smooth(.12, .48, r); legs = 1 - smooth(.35, 1, r); }
+      const bladeIn = smooth(0, .05, u) * (1 - smooth(.39, .45, u));
+      const square = Math.max(bladeIn, smooth(.86, .96, u));
+      g.save(); g.scale(-1, 1);
+      const hip = [lerp(3, -19, legs), wl - 12.5], feet = [29, wl - 8];
+      const kn = ik(hip, feet, 26, 25, -1);
+      const lean = lerp(26, -24, back);
+      const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean * .5 + 4), 9);
+      const nrm = [-tv[1], tv[0]];
+      const ext = add(sh, [29.5, 5]), chest = add(add(hip, tv, 14), nrm, 8.5);
+      const hand = along(ext, chest, arms); hand[1] += (1 - bladeIn) * 2.2;
+      const el = ik(sh, hand, 16, 14.5, 1);
+      const pin = [15, wl - 14];
+      const oar = (dx, dy, far) => {
+        const h = [hand[0] + dx, hand[1] + dy];
+        const b = [pin[0] + (pin[0] - h[0]) * 2, lerp(wl - 6, wl + 1.5, bladeIn) + dy];
+        const d = norm(sub(b, h)), c = far ? P.utstyrFjern : P.utstyr;
+        seg(h, b, 1.7, c);
+        seg(b, add(b, d, 8.5), lerp(1.7, 4.6, square), c);
+      };
+      oar(1, -1.4, true);
+      // skrog, sete og fotbrett
+      const u2 = P.utstyr;
+      g.fillStyle = u2; g.beginPath(); g.moveTo(-66, wl - 2.4); g.lineTo(70, wl - 3.2);
+      g.quadraticCurveTo(40, wl + 3.4, 0, wl + 3.1); g.quadraticCurveTo(-45, wl + 2.7, -66, wl - 2.4); g.closePath(); g.fill();
+      seg([hip[0] - 4.5, hip[1] + 3.2], [hip[0] + 4.5, hip[1] + 3.2], 3, u2);
+      seg([28.5, wl - 3.5], [31.5, wl - 12], 2.4, u2);
+      drawArm(sh, el[0], el[1], true);
+      drawLeg(hip, kn[0], kn[1], true);
+      drawTorso(hip, neck, A);
+      const hip2 = [hip[0], hip[1] + .6], feet2 = [feet[0], feet[1] + 1];
+      drawLeg(hip2, ik(hip2, feet2, 26, 25, -1)[0], feet2, false);
+      drawHead(neck, hc, A, { sway: Math.sin(u * TAU) * .6 });
+      drawArm(sh, el[0], el[1], false, false);
+      oar(0, 0, false);
+      seg([9, wl - 3], pin, 1.4, u2); seg([22, wl - 3], pin, 1.4, u2);
+      g.restore();
+      underVann(wl + .6, A.t, 0);
+    }
+  };
 
-/* ================================================================
-   MOTOR
-   ================================================================ */
-const stage = document.getElementById('stage');
-const cvs = document.getElementById('scene');
-const ctx = cvs.getContext('2d');
-const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---- Skøyter (langløp) ---- */
+  SPORTS.skate = {
+    name: 'Skøyter', ground: 'land', speed: 2,
+    draw(A) {
+      const th = A.t / 1.3 * TAU;
+      const hip = [0, -36 + 1.3 * Math.cos(2 * th)];
+      const lean = 70 + 3 * Math.sin(2 * th + .4);
+      const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean - 44), 8.6);
+      const nrm = [-tv[1], tv[0]];
+      const foot = (ph, dy) => {
+        const s = fract(ph / TAU);
+        let x, lift = 0;
+        if (s < .56) { const k = s / .56; x = 9 - 41 * Math.pow(k, 2.2); }
+        else { const k = (s - .56) / .44; x = -32 + 41 * easeInOut(k); lift = 12 * Math.sin(Math.PI * k); }
+        return { a: [x, -4 - lift + dy], lift };
+      };
+      const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
+      const kn = ik(hip, fn.a, 26, 25, -1), kf = ik(hip, ff.a, 26, 25, -1);
+      const skate = (f, far) => {
+        const r = f.lift * 1.4 * D2R, d = [Math.cos(r), Math.sin(r)], nb = [-d[1], d[0]];
+        const b = add(f.a, nb, 4), c = far ? P.utstyrFjern : P.utstyr;
+        seg(add(b, d, -11), add(b, d, 17), 1.4, c);
+        seg(add(f.a, d, -1.5), add(b, d, -1.5), 1.4, c); seg(add(f.a, d, 6.5), add(b, d, 8.5), 1.4, c);
+        seg(add(f.a, d, -1.8), add(f.a, d, 6.5), 5.2, farge(far));
+      };
+      // armen som ligger på ryggen
+      const bh = add(add(hip, tv, 5), nrm, -7.2);
+      const be = ik(sh, bh, 16, 14.5, -1);
+      const aa = -35 - 70 * Math.cos(th), ae = limb(sh, aa, 16), ah = limb(ae, aa + 12, 14.5);
+      drawLeg(hip, kf[0], kf[1], true, { shoe: false }); skate(ff, true);
+      drawTorso(hip, neck, A);
+      drawArm(sh, be[0], be[1], true);
+      drawLeg(hip, kn[0], kn[1], false, { shoe: false }); skate(fn, false);
+      drawHead(neck, hc, A);
+      drawArm(sh, ae, ah, false);
+    }
+  };
 
-let W = 1, H = 1, DPR = 1, U = 1, groundY = 0, horizonY = 0, trackTop = 0, athX = 0, lmCX = 0, portrait = true;
-const AX = 190, AY = 165, LWU = 380, LHU = 232;
-const layers = [0, 1].map(() => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; });
-const lmCache = new Map();
+  /* ---- Rullestolløp ---- */
+  SPORTS.wheel = {
+    name: 'Rullestolløp', ground: 'land', speed: 2,
+    draw(A) {
+      const T = .95, u = fract(A.t / T), R = 20, C = [0, -R], rimR = 11, rot = A.dist / R;
+      let ang, rad, push;
+      if (u < .42) { const k = easeInOut(u / .42); ang = lerp(-110, 70, k); rad = rimR; push = Math.sin(Math.PI * u / .42); }
+      else { const k = (u - .42) / .58; ang = lerp(70, 250, easeInOut(k)); rad = rimR + 7 * Math.sin(Math.PI * k); push = 0; }
+      const hand = [C[0] + Math.cos(ang * D2R) * rad, C[1] + Math.sin(ang * D2R) * rad];
+      const hip = [-10, -26];
+      const lean = 76 + 5 * push;
+      const tv = up(lean), neck = add(hip, tv, 27), sh = add(hip, tv, 24), hc = add(neck, [7, -4.6 + 1.2 * push]);
+      const el = ik(sh, hand, 16, 14.5, 1), elf = ik(sh, [hand[0] - 1, hand[1] - 1], 16, 14.5, 1);
+      const knee = [13, -17], foot = [-9, -11.5];
+      const u2 = P.utstyr, uf = P.utstyrFjern;
+      drawArm(sh, elf[0], elf[1], true);
+      ring([C[0] - 1, C[1] - .6], rimR, 1.3, uf);
+      wheel([C[0] - 1, C[1] - .6], R, rot, uf);
+      seg([-6, -9], [54, -8], 2.4, u2); seg([36, -8.5], [41, -14], 2, u2); seg([41, -14], [45, -14], 2, u2);
+      wheel([58, -6.5], 6.5, rot * R / 6.5, u2);
+      seg([50, -8], [58, -6.5], 2.2, u2);
+      drawLeg(hip, knee, foot, true, { footDir: [-1, .15] });
+      // setebøtte
+      g.fillStyle = u2; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-20, -9); g.lineTo(17, -9);
+      g.quadraticCurveTo(22, -9, 21, -14); g.lineTo(16, -19); g.lineTo(2, -19); g.lineTo(-8, -22); g.closePath(); g.fill();
+      drawTorso(hip, neck, A);
+      drawHead(neck, hc, A);
+      wheel(C, R, rot, u2);
+      ring(C, rimR, 1.6, u2);
+      drawArm(sh, el[0], el[1], false, false);
+    }
+  };
 
-const st = {
-  ai: 0, pi: 0, round: 0, count: 0,
-  cur: null, prev: null, actK: 1,
-  place: 0, placePrev: -1, placeK: 1, placeAge: 0, prevAge: 0,
-  // Stedet byttes kort tid etter idretten, så får kombinasjonen stå litt før neste idrett.
-  timer: 0, actToPlace: 1.5, placeToAct: 3.2, nextKind: 'act',
-  paused: false, tempo: 1, t: 0, scroll: 0, speed: 1,
-  amb: [[255, 255, 255], 0], cloudX: 0,
-  prog: 0, progHold: 0, msg: -1, pct: -1,
-};
-const STARS = Array.from({ length: 90 }, (_, i) => [hash(i * 3.1), hash(i * 7.7) * .78, .5 + hash(i * 1.9) * 1.1, hash(i * 5.3) * TAU]);
-const CLOUDS = Array.from({ length: 6 }, (_, i) => [hash(i * 11.3), .1 + hash(i * 4.1) * .34, .7 + hash(i * 2.9) * .7]);
+  /* ================================================================
+     LANDEMERKER – én flate i én farge, tegnet i egne enheter med base i
+     (0,0) og y opp negativ. box = [minX, maxX, høyde]. Detaljer som må
+     til for å kjenne dem igjen (buer, urskive, vinduer) skjæres ut med
+     ut(). Konturer som både fylles og klippes tegnes av en egen funksjon
+     to ganger (Path2D finnes ikke i alle workere).
+     ================================================================ */
+  const LM = {};
 
-function makeAthlete(entry, round) {
-  const sp = SPORTS[entry.sport];
-  const gender = entry.fixed || round % 2 === 0 ? entry.gender : (entry.gender === 'm' ? 'f' : 'm');
-  const n = st.count++;
-  const look = Object.assign({ gender, skin: SKINS[(n * 5 + 2) % SKINS.length], hair: HAIRS[(n * 7 + 1) % HAIRS.length] }, KITS[entry.sport][gender]);
-  return { sp, key: entry.sport, look, gender, t: rnd(0, 2), dist: 0, parts: [], marks: {}, bib: 100 + Math.floor(Math.random() * 880) };
-}
+  LM.holmenkollen = { box: [-150, 150, 218], draw(f) {
+    const hy = x => x <= 18 ? -104 * (1 - Math.pow(1 - clamp((x + 150) / 100, 0, 1), 2)) : -104 * Math.pow(1 - clamp((x - 18) / 132, 0, 1), 2.2);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-150, 0);
+    for (let x = -150; x <= 150; x += 3) g.lineTo(x, hy(x));
+    g.lineTo(150, 0); g.closePath(); g.fill();
+    const tb = hy(-70);
+    poly([-77, tb + 2, -63, tb + 2, -66, -200, -74, -200], f);
+    box(-81, -213, 22, 14, f); poly([-83, -213, -57, -213, -62, -218, -78, -218], f);
+    poly([-74, -206, -66, -210, 22, -110, 16, -104], f);
+    for (const x of [-44, -18]) { const t = (x + 70) / 88, yr = lerp(-205, -106, t); box(x - 1.6, yr, 3.2, hy(x) - yr + 2, f); }
+  }};
 
-function layout() {
-  const r = stage.getBoundingClientRect();
-  W = Math.max(1, r.width); H = Math.max(1, r.height);
-  DPR = Math.min(2, window.devicePixelRatio || 1);
-  cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
-  portrait = W < H * 1.1;
-  U = clamp(Math.min(W / 250, H / 470), .75, 2.4);
-  groundY = Math.round(Math.min(H * .68, H - 150));
-  horizonY = groundY - 52 * U; trackTop = groundY - 16 * U;
-  athX = portrait ? W * .5 : W * .42;
-  lmCX = portrait ? W * .52 : W * .6;
-  for (const L of layers) { L.c.width = Math.ceil(LWU * U * DPR); L.c.height = Math.ceil(LHU * U * DPR); }
-  lmCache.clear();
-}
+  LM.eiffel = { box: [-80, 80, 300], draw(f) {
+    g.fillStyle = f; g.beginPath();
+    g.moveTo(-78, 0); g.quadraticCurveTo(-44, -40, -27, -100); g.quadraticCurveTo(-14, -170, -6, -252);
+    g.lineTo(-4.5, -268); g.lineTo(4.5, -268); g.lineTo(6, -252); g.quadraticCurveTo(14, -170, 27, -100);
+    g.quadraticCurveTo(44, -40, 78, 0); g.lineTo(56, 0); g.quadraticCurveTo(0, -82, -56, 0); g.closePath();
+    g.fill();
+    box(-47, -68, 94, 8, f);
+    box(-27, -131, 54, 6, f);
+    box(-7.5, -276, 15, 9, f); poly([-6, -276, 6, -276, 3, -281, -3, -281], f); box(-1.1, -300, 2.2, 20, f);
+  }};
 
-/* ---------- landemerke-cache ---------- */
-function landmarkImage(pi) {
-  let c = lmCache.get(pi);
-  if (c) return c;
-  const p = PLACES[pi], lm = LM[p.lm];
-  const [x0, x1, h] = lm.box, bw = x1 - x0;
-  const maxH = Math.max(60, (horizonY - 72) * .9), maxW = W * (portrait ? 1.05 : .8);
-  const s = Math.min(maxH / h, maxW / bw);
-  const pad = 6;
-  const cv = document.createElement('canvas');
-  cv.width = Math.ceil((bw * s + pad * 2) * DPR); cv.height = Math.ceil((h * s + pad * 2) * DPR);
-  const lc = cv.getContext('2d');
-  lc.setTransform(DPR * s, 0, 0, DPR * s, DPR * (pad - x0 * s), DPR * (pad + h * s));
-  lc.lineCap = 'round'; lc.lineJoin = 'round';
-  g = lc;
-  lm.draw(Object.assign({ f: hx(p.lmc), l: mix(p.lmc, p.sky[1], .45), d: darken(p.lmc, .3) }, p.x || {}));
-  c = { cv, w: cv.width / DPR, h: cv.height / DPR, ox: pad - x0 * s, oy: pad + h * s, cx: (x0 + x1) / 2 * s };
-  lmCache.set(pi, c);
-  return c;
-}
+  LM.bigben = { box: [-135, 112, 306], draw(f) {
+    box(-120, -58, 205, 58, f); box(-121, -64, 207, 6, f);
+    box(-133, -150, 30, 150, f);
+    box(-18, -104, 16, 46, f); poly([-19, -104, -1, -104, -10, -134], f);
+    box(84, -190, 22, 190, f);
+    box(81, -233, 28, 43, f);
+    box(84, -253, 22, 20, f);
+    poly([82, -253, 108, -253, 103, -269, 87, -269], f);
+    poly([87, -269, 103, -269, 95, -306], f);
+    ut(() => ring([95, -211], 8.5, 2.2, UT));
+  }};
 
-/* ---------- himmel og bakgrunn ---------- */
-const am = c => mix(c, st.amb[0], st.amb[1]);
-function fillR(x, y, w, h, c) { ctx.fillStyle = col(c); ctx.fillRect(x, y, w, h); }
-function vgrad(y0, y1, c0, c1) { const gr = ctx.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, css(c0)); gr.addColorStop(1, css(c1)); ctx.fillStyle = gr; ctx.fillRect(0, y0, W, y1 - y0); }
+  LM.liberty = { box: [12, 102, 240], draw(f) {
+    poly([12, 0, 102, 0, 94, -12, 20, -12], f);
+    poly([32, -12, 82, -12, 78, -78, 36, -78], f);
+    box(33, -84, 48, 6, f); box(39, -94, 36, 10, f);
+    poly([43, -94, 71, -94, 67, -120, 64, -150, 60, -166, 52, -166, 48, -150, 46, -120], f);
+    dot([56, -174], 6.5, f);
+    for (const a of [-160, -135, -112, -90, -68, -45, -20]) seg([56 + Math.cos(a * D2R) * 5, -174 + Math.sin(a * D2R) * 5], [56 + Math.cos(a * D2R) * 13, -174 + Math.sin(a * D2R) * 13], 2, f);
+    poly([49, -160, 54, -164, 47, -214, 43, -213], f);
+    box(42, -222, 5, 9, f); poly([39, -222, 50, -222, 48, -226, 41, -226], f);
+    g.fillStyle = f; g.beginPath(); g.ellipse(44.5, -232, 3.3, 5.6, 0, 0, TAU); g.fill();
+    poly([62, -150, 68, -146, 72, -140, 66, -138], f);
+    poly([64, -152, 72, -148, 69, -132, 61, -136], f);
+  }};
 
-function drawSun(s, a, isMoon) {
-  if (!s || a <= .01) return;
-  const x = W * s.x, y = horizonY * s.y, r = s.r * U;
-  ctx.save(); ctx.globalAlpha = a;
-  const gr = ctx.createRadialGradient(x, y, r * .4, x, y, r * (isMoon ? 4 : 5.5));
-  gr.addColorStop(0, css(s.c, isMoon ? .35 : .55)); gr.addColorStop(1, css(s.c, 0));
-  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r * 6, 0, TAU); ctx.fill();
-  ctx.fillStyle = css(s.c); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-  if (isMoon) { ctx.fillStyle = 'rgba(160,172,200,.35)'; ctx.beginPath(); ctx.arc(x - r * .3, y - r * .2, r * .25, 0, TAU); ctx.arc(x + r * .35, y + r * .3, r * .18, 0, TAU); ctx.fill(); }
-  ctx.restore();
-}
-function drawAurora(a, t) {
-  if (a <= .01) return;
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const n = 40, step = W / n;
-  for (let i = 0; i < 3; i++) {
-    const base = horizonY * (.3 + i * .09), hgt = horizonY * (.2 - i * .035);
-    const c = i === 1 ? [150, 110, 255] : [70, 240, 170];
-    const gr = ctx.createLinearGradient(0, base - hgt * 1.3, 0, base + hgt * .4);
-    gr.addColorStop(0, css(c, 0)); gr.addColorStop(.55, css(c, .22 * a)); gr.addColorStop(.85, css(c, .45 * a)); gr.addColorStop(1, css(c, 0));
-    ctx.fillStyle = gr; ctx.beginPath();
-    for (let s = 0; s <= n; s++) { const x = s * step, y = base - hgt + Math.sin(x * .006 + t * .35 + i * 1.7) * hgt * .35 + Math.sin(x * .017 - t * .6 + i) * hgt * .12; s ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-    for (let s = n; s >= 0; s--) { const x = s * step, y = base + Math.sin(x * .006 + t * .35 + i * 1.7) * hgt * .3 + Math.sin(x * .011 + t * .4) * hgt * .1; ctx.lineTo(x, y); }
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-}
-function drawClouds(p, a) {
-  if (a <= .01 || !p.cloud) return;
-  ctx.save(); ctx.globalAlpha = a * p.cloud[1]; ctx.fillStyle = css(p.cloud[0]);
-  ctx.beginPath();
-  for (let i = 0; i < CLOUDS.length; i++) {
-    const [hx0, hy, sc] = CLOUDS[i], s = sc * U;
-    const span = W + 160 * U;
-    const x = ((hx0 * span - st.cloudX * (.6 + sc * .4)) % span + span) % span - 80 * U, y = horizonY * hy;
-    ctx.moveTo(x, y); ctx.ellipse(x, y, 26 * s, 7 * s, 0, 0, TAU);
-    ctx.moveTo(x - 8 * s, y - 5 * s); ctx.arc(x - 8 * s, y - 5 * s, 10 * s, 0, TAU);
-    ctx.moveTo(x + 7 * s, y - 7 * s); ctx.arc(x + 7 * s, y - 7 * s, 12 * s, 0, TAU);
-  }
-  ctx.fill(); ctx.restore();
-}
-function drawBack(p, a) {
-  if (a <= .01) return;
-  ctx.save(); ctx.globalAlpha = a;
-  const base = horizonY + 1;
-  for (let layer = 0; layer < 2; layer++) {
-    const off = st.scroll * (layer ? .1 : .05) + (layer ? 700 : 0);
-    const amp = (layer ? .09 : .15) * horizonY;
-    ctx.fillStyle = css(p.hills[layer]); ctx.beginPath(); ctx.moveTo(0, base);
-    if (p.back === 'city') {
-      const slot = (layer ? 16 : 12) * U, first = Math.floor(off / slot) - 1;
-      for (let i = first; i < first + W / slot + 3; i++) {
-        const x = i * slot - off, hh = (.25 + .75 * hash(i * 1.3 + layer * 77)) * amp * (layer ? .7 : 1);
-        ctx.lineTo(x, base - hh);
-        if (hash(i * 2.1 + layer) > .88) { ctx.lineTo(x + slot * .45, base - hh); ctx.lineTo(x + slot * .5, base - hh - amp * .25); ctx.lineTo(x + slot * .55, base - hh); }
-        ctx.lineTo(x + slot, base - hh);
+  LM.rio = { box: [-170, 150, 240], draw(f) {
+    g.fillStyle = f; g.beginPath(); g.moveTo(-170, 0);
+    g.bezierCurveTo(-130, -25, -95, -70, -70, -110); g.bezierCurveTo(-50, -140, -30, -178, -14, -186);
+    g.lineTo(2, -186); g.bezierCurveTo(12, -176, 24, -140, 40, -100); g.bezierCurveTo(60, -55, 100, -15, 150, 0);
+    g.closePath(); g.fill();
+    box(-11, -193, 10, 8, f);
+    poly([-12, -193, 0, -193, -2.5, -227, -9.5, -227], f);
+    box(-27, -227.5, 42, 4.4, f);
+    dot([-6, -231.5], 3.4, f);
+  }};
+
+  LM.fuji = { box: [-190, 190, 162], draw(f) {
+    const fjell = () => {
+      g.beginPath();
+      g.moveTo(-190, 0); g.bezierCurveTo(-120, -40, -70, -110, -34, -152); g.lineTo(-22, -160); g.lineTo(-10, -156);
+      g.lineTo(0, -161); g.lineTo(12, -157); g.lineTo(22, -152); g.bezierCurveTo(60, -110, 120, -40, 190, 0); g.closePath();
+    };
+    fjell(); g.fillStyle = f; g.fill();
+    // snøhetta som en lysere flate
+    g.save(); fjell(); g.clip();
+    ut(() => poly([-200, -200, 200, -200, 200, -120, 40, -114, 30, -126, 20, -110, 10, -124, 0, -106, -10, -122, -20, -104, -30, -120, -40, -110, -52, -124, -200, -126], UT), .5);
+    g.restore();
+  }};
+
+  LM.colosseum = { box: [-160, 160, 118], draw(f) {
+    const kontur = () => {
+      g.beginPath();
+      g.moveTo(-160, 0); g.lineTo(-160, -104); g.quadraticCurveTo(-158, -111, -150, -112); g.lineTo(40, -112);
+      for (const [x, y] of [[50, -106], [60, -100], [70, -100], [80, -90], [92, -86], [100, -76], [112, -72], [122, -62], [134, -58], [146, -46], [160, -42]]) g.lineTo(x, y);
+      g.lineTo(160, 0); g.closePath();
+    };
+    kontur(); g.fillStyle = f; g.fill();
+    g.save(); kontur(); g.clip();
+    const N = 13;
+    ut(() => {
+      for (const [yb, yt] of [[-2, -28], [-33, -58], [-63, -87]]) {
+        for (let k = 0; k < N; k++) {
+          const u = -1 + (k + .5) * 2 / N, x = 154 * Math.sin(u * Math.PI / 2), w = 15 * Math.cos(u * Math.PI / 2) + 1.5;
+          roundArch(x, yb, w, yb - yt, UT);
+        }
       }
-    } else {
-      for (let x = -6; x <= W + 6; x += 6) {
-        const wx = (x + off) / U + layer * 400;
-        let v;
-        if (p.back === 'mount') v = .3 + .7 * (1 - Math.abs(Math.sin(wx * .0048 + layer))) * (.75 + .25 * Math.sin(wx * .0017)) + .06 * Math.sin(wx * .03);
-        else if (p.back === 'dunes') v = .22 + .2 * (.5 + .5 * Math.sin(wx * .006)) + .08 * Math.sin(wx * .017 + 1);
-        else v = .45 + .25 * Math.sin(wx * .004) + .15 * Math.sin(wx * .011 + 1.3) + .05 * Math.sin(wx * .031);
-        ctx.lineTo(x, base - v * amp);
-      }
-    }
-    ctx.lineTo(W, base); ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-}
-function drawLandmark(pi, a, dx) {
-  if (a <= .01) return;
-  const c = landmarkImage(pi);
-  const ox = lmCX + dx - c.cx;
-  ctx.save(); ctx.globalAlpha = a;
-  ctx.drawImage(c.cv, ox - c.ox, horizonY + 2 - c.oy, c.w, c.h);
-  ctx.restore();
-}
+    }, .6);
+    g.restore();
+  }};
 
-/* ---------- underlag: vei, snø, vann, is, bane ---------- */
-function propsRoad(par) {
-  const slot = 46 * U, off = st.scroll * par, first = Math.floor(off / slot) - 1, base = trackTop + 3 * U;
-  const tree = am(mix('#4E7E4B', mix(PLACES[st.place].hills[1], PLACES[Math.max(0, st.placePrev)].hills[1], 1 - st.placeK), .3));
-  const night = nightFactor();
-  for (let i = first; i < first + W / slot + 3; i++) {
-    const h = hash(i * 3.7), x = i * slot - off + hash(i) * 14 * U;
-    if (h < .34) {
-      g = ctx;
-      ctx.lineCap = 'round';
-      seg([x, base], [x, base - 40 * U], 1.7 * U, am('#2F3541'));
-      ctx.strokeStyle = css(am('#2F3541')); ctx.lineWidth = 1.4 * U; ctx.beginPath(); ctx.moveTo(x, base - 39 * U);
-      ctx.quadraticCurveTo(x, base - 43 * U, x + 6 * U, base - 42 * U); ctx.stroke();
-      fillR(x + 4 * U, base - 42.5 * U, 5 * U, 2.2 * U, am('#2F3541'));
-      if (night > .05) {
-        const gr = ctx.createRadialGradient(x + 6.5 * U, base - 40 * U, 0, x + 6.5 * U, base - 40 * U, 16 * U);
-        gr.addColorStop(0, `rgba(255,214,140,${.55 * night})`); gr.addColorStop(1, 'rgba(255,214,140,0)');
-        ctx.fillStyle = gr; ctx.fillRect(x - 12 * U, base - 58 * U, 36 * U, 36 * U);
-      }
-    } else if (h < .8) {
-      const s = .8 + hash(i * 1.9) * .5;
-      g = ctx; seg([x, base], [x, base - 13 * U * s], 2.2 * U, am('#5A4636'));
-      ctx.fillStyle = css(tree); ctx.beginPath();
-      ctx.arc(x, base - 21 * U * s, 9 * U * s, 0, TAU); ctx.arc(x - 5.5 * U * s, base - 16 * U * s, 6.5 * U * s, 0, TAU); ctx.arc(x + 6 * U * s, base - 17 * U * s, 7 * U * s, 0, TAU);
-      ctx.fill();
-    }
-  }
-}
-function propsSpruce(par, baseY) {
-  const slot = 22 * U, off = st.scroll * par, first = Math.floor(off / slot) - 1;
-  g = ctx;
-  const c = am('#2D5446'), snow = am('#F2F6FA');
-  for (let i = first; i < first + W / slot + 3; i++) {
-    if (hash(i * 2.3) < .25) continue;
-    const x = i * slot - off + hash(i) * 10 * U, h = (20 + hash(i * 5.1) * 26) * U;
-    ctx.save(); ctx.translate(x, baseY); spruce(0, 0, h, c, snow); ctx.restore();
-  }
-}
-const GROUNDS = {
-  road() {
-    fillR(0, trackTop, W, 5 * U, am('#AEB3BA'));
-    fillR(0, trackTop + 5 * U, W, 1.2 * U, am('#7D838D'));
-    vgrad(trackTop + 6.2 * U, groundY + 24 * U, am('#687180'), am('#4F5765'));
-    vgrad(groundY + 24 * U, H, am('#949BA5'), am('#7F8791'));
-    const per = 34 * U, x0 = -fract(st.scroll / per) * per;
-    ctx.fillStyle = css(am('#ECE6D6'));
-    for (let x = x0; x < W; x += per) ctx.fillRect(x, groundY + 10 * U, 17 * U, 1.6 * U);
-    ctx.fillStyle = css(am('#7A818C'));
-    const per2 = 40 * U, x2 = -fract(st.scroll / per2) * per2;
-    for (let x = x2; x < W; x += per2) ctx.fillRect(x, groundY + 24 * U, 1 * U, H - groundY - 24 * U);
-    propsRoad(.92);
-  },
-  snow() {
-    propsSpruce(.9, trackTop + 2 * U);
-    vgrad(trackTop, H, am('#F2F6FA'), am('#D6E1EC'));
-    fillR(0, trackTop, W, 1.4 * U, css(am('#C9D6E4'), .8));
-    ctx.fillStyle = css(am('#C3D1E0'));
-    for (const y of [groundY + .6 * U, groundY + 3.4 * U, groundY + 17 * U, groundY + 19.8 * U]) ctx.fillRect(0, y, W, 1.1 * U);
-    ctx.fillStyle = 'rgba(255,255,255,.9)';
-    const slot = 9 * U, off = st.scroll, first = Math.floor(off / slot) - 1;
-    for (let i = first; i < first + W / slot + 2; i++) { const y = groundY + (6 + hash(i * 1.7) * 40) * U; if (y < H) ctx.fillRect(i * slot - off, y, 1.2 * U, 1.2 * U); }
-  },
-  water() {
-    vgrad(trackTop, H, am('#4C9CCB'), am('#1C5A88'));
-    fillR(0, trackTop, W, 1.2 * U, css(am('#A9D6F0'), .7));
-    ctx.lineCap = 'round';
-    const rows = 10;
-    for (let r = 0; r < rows; r++) {
-      const t = r / (rows - 1), y = trackTop + 3 * U + (H - trackTop - 6 * U) * Math.pow(t, 1.35);
-      const per = (26 + 30 * t) * U, off = st.scroll * (.5 + .7 * t) + r * 37 * U, first = Math.floor(off / per) - 1;
-      ctx.strokeStyle = `rgba(255,255,255,${(.22 + .14 * t).toFixed(3)})`; ctx.lineWidth = (.8 + .7 * t) * U; ctx.beginPath();
-      for (let i = first; i < first + W / per + 2; i++) {
-        const x = i * per - off + hash(i + r * 31) * per * .5, w = (7 + 8 * t) * U * (.7 + hash(i * 1.3 + r) * .6);
-        ctx.moveTo(x, y); ctx.quadraticCurveTo(x + w / 2, y - 1.4 * U * (.6 + t), x + w, y);
-      }
-      ctx.stroke();
-    }
-    const y = groundY - 17 * U, per = 6.5 * U, off = st.scroll * .96, first = Math.floor(off / per) - 1;
-    for (let i = first; i < first + W / per + 2; i++) {
-      const x = i * per - off, k = ((i % 10) + 10) % 10;
-      ctx.fillStyle = css(am(k < 5 ? '#E8453C' : '#F5F5F2'));
-      ctx.beginPath(); ctx.ellipse(x, y + Math.sin(i * .7 + st.t * 3) * .4 * U, 2.8 * U, 1.7 * U, 0, 0, TAU); ctx.fill();
-    }
-  },
-  ice() {
-    propsSpruce(.88, trackTop - 1 * U);
-    ctx.fillStyle = css(am('#F5F9FC')); ctx.beginPath(); ctx.moveTo(0, trackTop + 3 * U);
-    const off = st.scroll * .95;
-    for (let x = 0; x <= W + 8; x += 8) ctx.lineTo(x, trackTop - (2.4 + 1.6 * Math.sin((x + off) * .03 / U) + 1.2 * Math.sin((x + off) * .011 / U)) * U);
-    ctx.lineTo(W, trackTop + 3 * U); ctx.closePath(); ctx.fill();
-    vgrad(trackTop + 2 * U, H, am('#E4EFF6'), am('#C6D9E7'));
-    const slot = 14 * U;
-    for (let r = 0; r < 12; r++) {
-      const yy = trackTop + (4 + r * 7 + hash(r) * 4) * U; if (yy > H) break;
-      const par = .85 + .3 * (yy - trackTop) / (H - trackTop), o = st.scroll * par, first = Math.floor(o / slot) - 1;
-      ctx.fillStyle = r % 2 ? 'rgba(255,255,255,.55)' : css(am('#A9C3D6'), .45);
-      for (let i = first; i < first + W / slot + 2; i++) if (hash(i * 1.3 + r * 9) > .55) ctx.fillRect(i * slot - o, yy, (8 + hash(i + r) * 26) * U, .6 * U);
-    }
-    const per = 30 * U, o2 = st.scroll, first2 = Math.floor(o2 / per) - 1;
-    for (let i = first2; i < first2 + W / per + 2; i++) { ctx.fillStyle = css(am(i % 2 ? '#E0493A' : '#23408E')); ctx.fillRect(i * per - o2, groundY + 9 * U, 5 * U, 2.2 * U); }
-  },
-  track() {
-    fillR(0, trackTop, W, 4 * U, am('#6C9A55'));
-    fillR(0, trackTop + 4 * U, W, 1.3 * U, am('#F1ECE4'));
-    vgrad(trackTop + 5.3 * U, H, am('#C85A40'), am('#A7432D'));
-    ctx.fillStyle = css(am('#F4EEE6'));
-    for (let y = groundY + 8 * U; y < H; y += 18 * U) ctx.fillRect(0, y, W, 1.2 * U);
-    const per = 60 * U, o = st.scroll, first = Math.floor(o / per) - 1;
-    for (let i = first; i < first + W / per + 2; i++) { ctx.fillStyle = css(am(i % 2 ? '#F3C43B' : '#3A7BD5')); ctx.fillRect(i * per - o, groundY + 5.5 * U, 1.6 * U, 5 * U); }
-    propsRoad(.92);
-  },
-};
-function nightFactor() {
-  const a = PLACES[st.place].night || 0, b = st.placePrev >= 0 ? (PLACES[st.placePrev].night || 0) : a;
-  return lerp(b, a, easeInOut(st.placeK));
-}
+  LM.giza = { box: [-176, 206, 142], draw(f) {
+    // skyggesiden er litt lysere – gir form uten en ny farge
+    const pyr = (cx, half, h) => {
+      poly([cx - half, 0, cx, -h, cx + half, 0], f);
+      ut(() => poly([cx + half * .25, 0, cx, -h, cx + half, 0], UT), .3);
+    };
+    pyr(172, 34, 58);
+    pyr(62, 88, 132);
+    pyr(-72, 104, 142);
+  }};
 
-/* ---------- utøverlag ---------- */
-function renderAthlete(A, L) {
-  const c = L.c, x = L.x;
-  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height);
-  x.setTransform(DPR * U, 0, 0, DPR * U, DPR * U * AX, DPR * U * AY);
-  x.lineCap = 'round'; x.lineJoin = 'round';
-  g = x;
-  A.sp.draw(A);
-  for (const p of A.parts) { x.globalAlpha = clamp(p.life / p.max, 0, 1) * .9; x.fillStyle = css(p.c); x.beginPath(); x.arc(p.x, p.y, p.r, 0, TAU); x.fill(); }
-  x.globalAlpha = 1;
-  if (st.amb[1] > .005) {
-    x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-atop';
-    x.fillStyle = css(st.amb[0], st.amb[1]); x.fillRect(0, 0, c.width, c.height);
-    x.globalCompositeOperation = 'source-over';
-  }
-}
-function drawAthlete(A, L, alpha, dxU) {
-  if (!A || alpha <= .01) return;
-  const x0 = athX + dxU * U;
-  if (A.sp.shadow) {
-    ctx.save(); ctx.globalAlpha = alpha * .2; ctx.fillStyle = '#0B1020';
-    ctx.beginPath(); ctx.ellipse(x0 + (A.key === 'bike' || A.key === 'wheel' ? 12 * U : 0), groundY + 1.5 * U, A.sp.shadow * U, 3 * U, 0, 0, TAU); ctx.fill(); ctx.restore();
-  }
-  renderAthlete(A, L);
-  ctx.save(); ctx.globalAlpha = alpha;
-  ctx.drawImage(L.c, x0 - AX * U, groundY - AY * U, LWU * U, LHU * U);
-  ctx.restore();
-}
+  LM.sydney = { box: [-30, 186, 100], draw(f) {
+    const shell = (x0, x1, tx, ty) => {
+      const kant = () => {
+        g.beginPath(); g.moveTo(x1, -14);
+        g.quadraticCurveTo(x1 - 3, ty * .5, tx, ty); g.quadraticCurveTo(x0 - 6, ty * .45, x0, -14); g.closePath();
+      };
+      ut(() => { kant(); g.lineWidth = 3.4; g.strokeStyle = UT; g.stroke(); });
+      kant(); g.fillStyle = f; g.fill();
+    };
+    shell(150, 186, 138, -58); shell(118, 166, 102, -84); shell(92, 142, 78, -100);
+    shell(50, 82, 40, -56); shell(22, 64, 10, -80); shell(-4, 42, -14, -96);
+    shell(-26, -6, -30, -40);
+    poly([-30, 0, 186, 0, 186, -14, -22, -14], f);
+  }};
 
-/* ---------- sekvens ---------- */
-function applyActivityUI(A) {
-  swap(ui.sport, A.sp.name);
-  ui.bib.textContent = A.bib;
-  describe();
-}
-function applyPlaceUI() {
-  const p = PLACES[st.place];
-  swap(ui.city, p.city);
-  swap(ui.coord, `${p.name} · <span class="nw">${p.coord}</span>`, true);
-  describe();
-}
-function nextActivity() {
-  st.ai = (st.ai + 1) % ACTS.length;
-  if (st.ai === 0) st.round++;
-  st.prev = st.cur; st.cur = makeAthlete(ACTS[st.ai], st.round); st.actK = 0;
-  applyActivityUI(st.cur);
-}
-function nextPlace() {
-  st.placePrev = st.place; st.prevAge = st.placeAge;
-  st.place = (st.place + 1) % PLACES.length; st.placeK = 0; st.placeAge = 0;
-  lmCache.forEach((_, k) => { if (k !== st.place && k !== st.placePrev) lmCache.delete(k); });
-  applyPlaceUI();
-}
-
-/* ---------- oppdatering ---------- */
-const MSGS = ['Laster inn økten din', 'Henter pulssonene dine', 'Synkroniserer med klokken', 'Beregner treningsbelastningen', 'Tegner opp ruten'];
-function update(dt, rawDt) {
-  st.t += dt;
-  st.timer += dt;
-  if (st.timer >= (st.nextKind === 'place' ? st.actToPlace : st.placeToAct)) {
-    st.timer = 0;
-    if (st.nextKind === 'act') { nextActivity(); st.nextKind = 'place'; } else { nextPlace(); st.nextKind = 'act'; }
-  }
-  st.actK = Math.min(1, st.actK + dt / .95);
-  st.placeK = Math.min(1, st.placeK + dt / 1.5);
-  st.placeAge += dt; st.prevAge += dt;
-  const ak = easeInOut(st.actK);
-  st.speed = st.prev && st.actK < 1 ? lerp(st.prev.sp.speed, st.cur.sp.speed, ak) : st.cur.sp.speed;
-  const vU = st.speed * 120;
-  st.scroll += vU * U * dt;
-  st.cloudX += dt * (6 + vU * .02) * U;
-  const pk = easeInOut(st.placeK);
-  const pa = PLACES[st.placePrev >= 0 ? st.placePrev : st.place], pb = PLACES[st.place];
-  st.amb = [mix(pa.amb[0], pb.amb[0], pk), lerp(pa.amb[1], pb.amb[1], pk)];
-  for (const A of [st.cur, st.actK < 1 ? st.prev : null]) {
-    if (!A) continue;
-    A.t += dt; A.dist += vU * dt;
-    for (const p of A.parts) { p.x += (p.vx - vU * p.drift) * dt; p.y += p.vy * dt; p.vy += p.gr * dt; p.life -= dt; }
-    if (A.parts.length) A.parts = A.parts.filter(p => p.life > 0);
-  }
-  if (st.actK >= 1) st.prev = null;
-  // demo av lasting
-  if (st.progHold > 0) { st.progHold -= rawDt; if (st.progHold <= 0) st.prog = 0; }
-  else {
-    st.prog += rawDt * (4 + 22 * hash(Math.floor(performance.now() / 600)));
-    if (st.prog >= 100) { st.prog = 100; st.progHold = 1.6; }
-  }
-  const pct = Math.floor(st.prog);
-  if (pct !== st.pct) { st.pct = pct; ui.pct.textContent = `${pct} %`; ui.fill.style.width = `${st.prog}%`; }
-  const m = st.prog >= 100 ? 5 : Math.min(4, Math.floor(st.prog / 20));
-  if (m !== st.msg) { st.msg = m; ui.msg.textContent = m === 5 ? 'Klar – god økt!' : MSGS[m]; }
-}
-
-/* ---------- tegning av hele scenen ---------- */
-function render() {
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const pk = easeInOut(st.placeK);
-  const hasPrev = st.placePrev >= 0 && st.placeK < 1;
-  const pa = PLACES[hasPrev ? st.placePrev : st.place], pb = PLACES[st.place];
-  const k = hasPrev ? pk : 1;
-  // himmel
-  const gr = ctx.createLinearGradient(0, 0, 0, horizonY);
-  gr.addColorStop(0, css(mix(pa.sky[0], pb.sky[0], k))); gr.addColorStop(.55, css(mix(pa.sky[1], pb.sky[1], k))); gr.addColorStop(1, css(mix(pa.sky[2], pb.sky[2], k)));
-  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, horizonY + 2);
-  const night = lerp(pa.night || 0, pb.night || 0, k);
-  if (night > .01) {
-    for (const [sx, sy, sr, ph] of STARS) { ctx.fillStyle = `rgba(255,255,255,${(night * (.45 + .45 * Math.sin(st.t * 1.6 + ph))).toFixed(3)})`; ctx.fillRect(sx * W, sy * horizonY, sr, sr); }
-  }
-  drawAurora(lerp(pa.aurora || 0, pb.aurora || 0, k), st.t);
-  if (hasPrev) { drawSun(pa.sun, 1 - k); drawSun(pa.moon, 1 - k, true); }
-  drawSun(pb.sun, k); drawSun(pb.moon, k, true);
-  if (hasPrev) drawClouds(pa, 1 - k);
-  drawClouds(pb, k);
-  if (hasPrev) drawBack(pa, 1 - k);
-  drawBack(pb, k);
-  // landemerker (glir sakte mot venstre)
-  const drift = age => W * .04 - Math.min(age, 14) * 5 * U;
-  const slide = reduceMotion ? 0 : 1;
-  if (hasPrev) drawLandmark(st.placePrev, 1 - k, drift(st.prevAge) - k * 40 * U * slide);
-  drawLandmark(st.place, k, drift(st.placeAge) + (1 - k) * 60 * U * slide);
-  // dis over horisonten
-  const hz = mix(pa.sky[2], pb.sky[2], k);
-  const hg = ctx.createLinearGradient(0, horizonY - 46 * U, 0, horizonY);
-  hg.addColorStop(0, css(hz, 0)); hg.addColorStop(1, css(hz, .45)); ctx.fillStyle = hg; ctx.fillRect(0, horizonY - 46 * U, W, 46 * U);
-  // fjernt terreng / vann
-  const farC = mix(pa.far, pb.far, k);
-  vgrad(horizonY, trackTop + 1, lighten(farC, .08), darken(farC, .06));
-  const water = lerp(pa.farWater ? 1 : 0, pb.farWater ? 1 : 0, k);
-  if (water > .01) {
-    ctx.fillStyle = `rgba(255,255,255,${(.35 * water).toFixed(3)})`;
-    const per = 20 * U, off = st.scroll * .3, first = Math.floor(off / per) - 1;
-    for (let r = 0; r < 4; r++) for (let i = first; i < first + W / per + 2; i++) if (hash(i * 1.7 + r * 13) > .5) ctx.fillRect(i * per - off + hash(i + r) * per, horizonY + (4 + r * 8) * U, (5 + hash(i * r) * 8) * U, .8 * U);
-  }
-  // underlag med kryssfade mellom aktiviteter
-  const ak = easeInOut(st.actK);
-  const gCur = st.cur.sp.ground, gPrev = st.prev ? st.prev.sp.ground : gCur;
-  if (st.prev && gPrev !== gCur && st.actK < 1) { GROUNDS[gPrev](); ctx.save(); ctx.globalAlpha = ak; GROUNDS[gCur](); ctx.restore(); }
-  else GROUNDS[gCur]();
-  // utøvere – stafettveksling: den gamle drar ifra, den nye kommer inn bakfra
-  if (st.prev && st.actK < 1) {
-    const out = reduceMotion ? 0 : easeIn(st.actK) * 110;
-    drawAthlete(st.prev, layers[1], 1 - smooth(0, .75, st.actK), out);
-    drawAthlete(st.cur, layers[0], smooth(.2, 1, st.actK), reduceMotion ? 0 : -(1 - easeOut(st.actK)) * 110);
-  } else drawAthlete(st.cur, layers[0], 1, 0);
-  // fartsstriper
-  if (st.speed > 1.5 && !reduceMotion) {
-    ctx.save(); ctx.globalAlpha = clamp((st.speed - 1.5) * .4, 0, .22); ctx.fillStyle = '#FFFFFF';
-    for (let i = 0; i < 7; i++) {
-      const span = W + 200 * U, x = span - fract(st.t * .9 + hash(i * 3.3)) * span - 100 * U;
-      const y = groundY - (8 + hash(i * 7.1) * 70) * U;
-      ctx.fillRect(x, y, (30 + hash(i) * 40) * U, .8 * U);
+  LM.bergen = { box: [-140, 139, 94], draw(f) {
+    // Bryggen: en rekke gavlhus med smale mellomrom
+    const hs = [62, 72, 58, 70, 64, 74, 60, 70, 64];
+    for (let i = 0; i < 9; i++) {
+      const w = 31, x = -140 + i * w, h = hs[i], gh = w * .62;
+      box(x + 1, -h, w - 2, h, f);
+      poly([x + .2, -h + .6, x + w - .2, -h + .6, x + w / 2, -h - gh], f);
     }
+  }};
+
+  LM.goldengate = { box: [-225, 225, 176], draw(f) {
+    const kabel = (x0, y0, x1, y1, cx, cy) => {
+      g.strokeStyle = f; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke();
+    };
+    kabel(-106, -165, 106, -165, 0, 65);
+    kabel(-114, -165, -225, -46, -170, -84); kabel(114, -165, 225, -46, 170, -84);
+    box(-225, -44, 450, 6, f);
+    for (const tx of [-110, 110]) {
+      poly([tx - 6, 0, tx + 6, 0, tx + 4.5, -172, tx - 4.5, -172], f);
+      box(tx - 5.5, -176, 11, 4, f);
+      // portalåpningene mellom tverrbjelkene
+      ut(() => { for (const [y0, y1] of [[-8, -38], [-64, -98], [-102, -132], [-136, -158]]) box(tx - 1.7, y1, 3.4, y0 - y1, UT); });
+    }
+  }};
+
+  LM.taj = { box: [-156, 156, 212], draw(f) {
+    box(-156, -12, 312, 12, f);
+    for (const x of [-140, 140]) {
+      poly([x - 6, -12, x + 6, -12, x + 4.5, -150, x - 4.5, -150], f);
+      box(x - 5, -158, 10, 8, f);
+      g.fillStyle = f; g.beginPath(); g.arc(x, -158, 6, Math.PI, 0); g.fill();
+      seg([x, -163], [x, -171], 1.2, f);
+    }
+    poly([-70, -12, 70, -12, 70, -96, 60, -106, -60, -106, -70, -96], f);
+    ut(() => pointArch(0, -12, 34, 82, UT), .45);
+    box(-30, -124, 60, 18, f);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-33, -124);
+    g.bezierCurveTo(-52, -146, -42, -178, -6, -192); g.quadraticCurveTo(0, -196, 6, -192);
+    g.bezierCurveTo(42, -178, 52, -146, 33, -124); g.closePath(); g.fill();
+    seg([0, -194], [0, -212], 1.8, f);
+    for (const x of [-52, 52]) {
+      box(x - 9, -118, 18, 12, f);
+      g.fillStyle = f; g.beginPath(); g.moveTo(x - 10, -118);
+      g.bezierCurveTo(x - 13, -126, x - 8, -136, x, -140); g.bezierCurveTo(x + 8, -136, x + 13, -126, x + 10, -118); g.closePath(); g.fill();
+    }
+  }};
+
+  LM.pisa = { box: [18, 80, 184], draw(f) {
+    g.save(); g.translate(40, 0); g.rotate(5.5 * D2R);
+    box(-19, -150, 38, 150, f);
+    box(-14, -174, 28, 24, f);
+    poly([-15, -174, 15, -174, 10, -181, -10, -181], f);
+    // etasjeskillene
+    ut(() => { for (let i = 0; i <= 6; i++) g.fillRect(-20, -24 - i * 21, 40, 1.8); g.fillRect(-15, -152, 30, 1.6); }, .7);
+    g.restore();
+  }};
+
+  LM.tromso = { box: [-72, 72, 112], draw(f) {
+    // Ishavskatedralen: trekantskiver bakfra og fram, med en smal spalte mellom
+    const cx = -28;
+    for (let i = 7; i >= 0; i--) {
+      const ax = cx + i * 10.5, ay = -110 + i * 8.6, hb = 34 - i * 1.3;
+      if (i < 7) ut(() => { g.lineWidth = 2.6; g.strokeStyle = UT; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + hb, 0); g.stroke(); });
+      poly([ax - hb, 0, ax, ay, ax + hb, 0], f);
+    }
+    ut(() => poly([cx - 21, -8, cx, -94, cx + 21, -8], UT), .35);
+    box(cx - 44, -9, 88, 9, f);
+  }};
+
+  LM.dubai = { box: [-24, 24, 330], draw(f) {
+    const tiers = [[-22, 22, 0, -60], [-20, 18, -60, -108], [-16, 17, -108, -148], [-14, 13, -148, -184], [-10, 11, -184, -214], [-8, 7, -214, -240], [-5, 5, -240, -262], [-3, 3, -262, -284]];
+    for (const [l, r, y0, y1] of tiers) box(l, y1, r - l, y0 - y1, f);
+    poly([-2.2, -284, 2.2, -284, 0, -330], f);
+  }};
+
+  LM.greatwall = { box: [-200, 200, 122], draw(f) {
+    const ridge = x => -58 - 24 * Math.sin((x + 200) / 400 * Math.PI * 2.1 + .4) - 8 * Math.sin(x * .045 + 1.2);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-200, 0);
+    for (let x = -200; x <= 200; x += 4) g.lineTo(x, ridge(x) - 8);
+    g.lineTo(200, 0); g.closePath(); g.fill();
+    for (let x = -198; x <= 198; x += 5) box(x, ridge(x) - 11.5, 2.6, 4, f);
+    // muren skilles fra fjellet med en lys stripe
+    ut(() => {
+      g.lineWidth = 1.4; g.strokeStyle = UT; g.beginPath();
+      for (let x = -200; x <= 200; x += 4) { const y = ridge(x) + 1; x === -200 ? g.moveTo(x, y) : g.lineTo(x, y); }
+      g.stroke();
+    }, .6);
+    for (const x of [-152, -64, 24, 118, 176]) {
+      const y = ridge(x);
+      box(x - 8, y - 27, 16, 27, f);
+      for (let k = 0; k < 4; k++) box(x - 8 + k * 4.6, y - 30.5, 2.6, 3.5, f);
+      ut(() => roundArch(x, y - 12, 4, 8, UT), .6);
+    }
+  }};
+
+  /* ---------- steder ---------- */
+  const PLACES = [
+    { lm: 'holmenkollen', navn: 'Holmenkollbakken', by: 'Oslo' },
+    { lm: 'eiffel', navn: 'Eiffeltårnet', by: 'Paris' },
+    { lm: 'bigben', navn: 'Big Ben', by: 'London' },
+    { lm: 'liberty', navn: 'Frihetsgudinnen', by: 'New York' },
+    { lm: 'rio', navn: 'Kristus-statuen', by: 'Rio de Janeiro' },
+    { lm: 'fuji', navn: 'Fuji', by: 'Japan' },
+    { lm: 'colosseum', navn: 'Colosseum', by: 'Roma' },
+    { lm: 'giza', navn: 'Pyramidene', by: 'Giza' },
+    { lm: 'sydney', navn: 'Operahuset', by: 'Sydney' },
+    { lm: 'bergen', navn: 'Bryggen', by: 'Bergen' },
+    { lm: 'goldengate', navn: 'Golden Gate', by: 'San Francisco' },
+    { lm: 'taj', navn: 'Taj Mahal', by: 'Agra' },
+    { lm: 'pisa', navn: 'Det skjeve tårnet', by: 'Pisa' },
+    { lm: 'tromso', navn: 'Ishavskatedralen', by: 'Tromsø' },
+    { lm: 'dubai', navn: 'Burj Khalifa', by: 'Dubai' },
+    { lm: 'greatwall', navn: 'Den kinesiske mur', by: 'Beijing' },
+  ];
+
+  // Løping vises alltid både som mann og kvinne. De andre bytter kjønn hver runde.
+  const ACTS = [
+    { sport: 'run', gender: 'm', fixed: true }, { sport: 'run', gender: 'f', fixed: true },
+    { sport: 'bike', gender: 'f' }, { sport: 'ski', gender: 'm' }, { sport: 'swim', gender: 'f' },
+    { sport: 'row', gender: 'm' }, { sport: 'skate', gender: 'f' }, { sport: 'wheel', gender: 'm' },
+  ];
+
+  /* ================================================================
+     MOTOR
+     ================================================================ */
+  // Bakkelinja ligger på 60 % av høyden. Samme tall som top: 60 % for
+  // teksten i lasteskjerm.css – endres de, må begge endres.
+  const BAKKE = .6;
+  let cvs = null, ctx = null, reduceMotion = false, frameId = 0, stoppet = false;
+  let W = 1, H = 1, DPR = 1, U = 1, groundY = 0, athX = 0, lmCX = 0, portrait = true, linjeGrad = null;
+  const AX = 190, AY = 165, LWU = 380, LHU = 232;
+  const layers = [0, 1].map(() => { const c = vert.lerret(1, 1); return { c, x: c.getContext('2d') }; });
+  const lmCache = new Map();
+
+  const st = {
+    ai: 0, round: 0,
+    cur: null, prev: null, actK: 1,
+    place: 0, placePrev: -1, placeK: 1, placeAge: 0, prevAge: 0,
+    // Stedet byttes kort tid etter idretten, så får kombinasjonen stå litt før neste idrett.
+    timer: 0, actToPlace: 1.5, placeToAct: 3.2, nextKind: 'act',
+    t: 0, scroll: 0, speed: 1,
+  };
+
+  function makeAthlete(entry, round) {
+    const gender = entry.fixed || round % 2 === 0 ? entry.gender : (entry.gender === 'm' ? 'f' : 'm');
+    return { sp: SPORTS[entry.sport], gender, t: Math.random() * 2, dist: 0 };
+  }
+
+  function layout(w, h, dpr) {
+    W = Math.max(1, w); H = Math.max(1, h);
+    DPR = Math.min(2, dpr || 1);
+    cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
+    portrait = W < H * 1.1;
+    U = clamp(Math.min(W / 300, H / 560), .7, 1.8);
+    groundY = Math.round(H * BAKKE);
+    athX = portrait ? W * .5 : W * .46;
+    lmCX = portrait ? W * .5 : W * .56;
+    for (const L of layers) { L.c.width = Math.ceil(LWU * U * DPR); L.c.height = Math.ceil(LHU * U * DPR); }
+    // Bakkelinja tones ut mot kantene.
+    linjeGrad = ctx.createLinearGradient(0, 0, W, 0);
+    linjeGrad.addColorStop(0, css(P.linje, 0)); linjeGrad.addColorStop(.2, css(P.linje));
+    linjeGrad.addColorStop(.8, css(P.linje)); linjeGrad.addColorStop(1, css(P.linje, 0));
+    lmCache.clear();
+  }
+
+  /* ---------- landemerke-cache ---------- */
+  function landmarkImage(pi) {
+    let c = lmCache.get(pi);
+    if (c) return c;
+    const lm = LM[PLACES[pi].lm];
+    const [x0, x1, h] = lm.box, bw = x1 - x0;
+    const maxH = Math.max(60, (groundY - 70) * .82), maxW = W * (portrait ? .86 : .62);
+    const s = Math.min(maxH / h, maxW / bw);
+    const pad = 6;
+    const cv = vert.lerret(Math.ceil((bw * s + pad * 2) * DPR), Math.ceil((h * s + pad * 2) * DPR));
+    const lc = cv.getContext('2d');
+    lc.setTransform(DPR * s, 0, 0, DPR * s, DPR * (pad - x0 * s), DPR * (pad + h * s));
+    lc.lineCap = 'round'; lc.lineJoin = 'round';
+    g = lc;
+    lm.draw(P.lm);
+    c = { cv, w: cv.width / DPR, h: cv.height / DPR, ox: pad - x0 * s, oy: pad + h * s, cx: (x0 + x1) / 2 * s };
+    lmCache.set(pi, c);
+    return c;
+  }
+  function drawLandmark(pi, a, dx) {
+    if (a <= .01) return;
+    const c = landmarkImage(pi);
+    const ox = lmCX + dx - c.cx;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.drawImage(c.cv, ox - c.ox, groundY - c.oy, c.w, c.h);
     ctx.restore();
   }
-  // vignett
-  const vg = ctx.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .35, W / 2, H * .5, Math.max(W, H) * .8);
-  vg.addColorStop(0, 'rgba(6,10,20,0)'); vg.addColorStop(1, 'rgba(6,10,20,.28)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  /* ---------- bakken: en linje, eller en bølge for vann ---------- */
+  function bakke(type, a) {
+    if (a <= .01) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = linjeGrad; ctx.strokeStyle = linjeGrad;
+    const lw = Math.max(1, 1.2 * U);
+    if (type === 'water') {
+      const y0 = groundY - 6.5 * U;
+      ctx.lineWidth = lw; ctx.beginPath();
+      for (let x = 0; x <= W + 6; x += 6) {
+        const y = y0 + Math.sin((x + st.scroll) / (8 * U)) * 1.3 * U;
+        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillRect(0, groundY - lw / 2, W, lw);
+    }
+    // korte streker under linja som glir forbi – det er de som gir fart
+    ctx.globalAlpha = a * .5;
+    const per = 40 * U, x0 = -fract(st.scroll / per) * per, y = groundY + 9 * U;
+    for (let x = x0; x < W; x += per) ctx.fillRect(x, y, 12 * U, lw);
+    ctx.restore();
+  }
+
+  /* ---------- utøverlag ---------- */
+  function renderAthlete(A, L) {
+    const c = L.c, x = L.x;
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height);
+    x.setTransform(DPR * U, 0, 0, DPR * U, DPR * U * AX, DPR * U * AY);
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    g = x;
+    A.sp.draw(A);
+  }
+  function drawAthlete(A, L, alpha, dxU) {
+    if (!A || alpha <= .01) return;
+    renderAthlete(A, L);
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.drawImage(L.c, athX + dxU * U - AX * U, groundY - AY * U, LWU * U, LHU * U);
+    ctx.restore();
+  }
+
+  /* ---------- sekvens ---------- */
+  function meldAktivitet() {
+    vert.post({ type: 'aktivitet', navn: st.cur.sp.name });
+    meldTilstand();
+  }
+  function meldSted() {
+    const p = PLACES[st.place];
+    vert.post({ type: 'sted', tekst: p.navn + ', ' + p.by });
+    meldTilstand();
+  }
+  function meldTilstand() {
+    vert.post({ type: 'tilstand', ai: st.ai, pi: st.place, round: st.round });
+  }
+  function nextActivity() {
+    st.ai = (st.ai + 1) % ACTS.length;
+    if (st.ai === 0) st.round++;
+    st.prev = st.cur; st.cur = makeAthlete(ACTS[st.ai], st.round); st.actK = 0;
+    meldAktivitet();
+  }
+  function nextPlace() {
+    st.placePrev = st.place; st.prevAge = st.placeAge;
+    st.place = (st.place + 1) % PLACES.length; st.placeK = 0; st.placeAge = 0;
+    lmCache.forEach((_, k) => { if (k !== st.place && k !== st.placePrev) lmCache.delete(k); });
+    meldSted();
+  }
+
+  /* ---------- oppdatering ---------- */
+  function update(dt) {
+    st.t += dt;
+    st.timer += dt;
+    if (st.timer >= (st.nextKind === 'place' ? st.actToPlace : st.placeToAct)) {
+      st.timer = 0;
+      if (st.nextKind === 'act') { nextActivity(); st.nextKind = 'place'; } else { nextPlace(); st.nextKind = 'act'; }
+    }
+    st.actK = Math.min(1, st.actK + dt / .95);
+    st.placeK = Math.min(1, st.placeK + dt / 1.2);
+    st.placeAge += dt; st.prevAge += dt;
+    const ak = easeInOut(st.actK);
+    st.speed = st.prev && st.actK < 1 ? lerp(st.prev.sp.speed, st.cur.sp.speed, ak) : st.cur.sp.speed;
+    const vU = st.speed * 120;
+    st.scroll += vU * U * dt;
+    for (const A of [st.cur, st.actK < 1 ? st.prev : null]) {
+      if (!A) continue;
+      A.t += dt; A.dist += vU * dt;
+    }
+    if (st.actK >= 1) st.prev = null;
+  }
+
+  /* ---------- tegning av hele scenen ---------- */
+  function render() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    // landemerket glir sakte mot venstre og tones over i det neste
+    const hasPrev = st.placePrev >= 0 && st.placeK < 1;
+    const k = hasPrev ? easeInOut(st.placeK) : 1;
+    const drift = age => W * .03 - Math.min(age, 14) * 4 * U;
+    const slide = reduceMotion ? 0 : 1;
+    if (hasPrev) drawLandmark(st.placePrev, 1 - k, drift(st.prevAge) - k * 30 * U * slide);
+    drawLandmark(st.place, k, drift(st.placeAge) + (1 - k) * 40 * U * slide);
+    // Bakken. Vannlinja tegnes over utøveren, så svømmeren ligger i vannet.
+    const ak = easeInOut(st.actK), bytter = st.prev && st.actK < 1;
+    const gCur = st.cur.sp.ground, gPrev = bytter ? st.prev.sp.ground : gCur;
+    const lag = gPrev !== gCur ? [[gPrev, 1 - ak], [gCur, ak]] : [[gCur, 1]];
+    for (const [t, a] of lag) if (t !== 'water') bakke(t, a);
+    // utøvere – stafettveksling: den gamle drar ifra, den nye kommer inn bakfra
+    if (bytter) {
+      const out = reduceMotion ? 0 : easeIn(st.actK) * 110;
+      drawAthlete(st.prev, layers[1], 1 - smooth(0, .75, st.actK), out);
+      drawAthlete(st.cur, layers[0], smooth(.2, 1, st.actK), reduceMotion ? 0 : -(1 - easeOut(st.actK)) * 110);
+    } else drawAthlete(st.cur, layers[0], 1, 0);
+    for (const [t, a] of lag) if (t === 'water') bakke(t, a);
+  }
+
+  /* ---------- løkke og meldinger ---------- */
+  let last = 0;
+  function frame(now) {
+    if (stoppet) return;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)) * (reduceMotion ? .6 : 1);
+    last = now;
+    update(dt);
+    render();
+    frameId = raf(frame);
+  }
+  const api = {
+    start(d) {
+      cvs = d.canvas; ctx = cvs.getContext('2d');
+      reduceMotion = !!d.reduceMotion;
+      settPalett(d.palett);
+      // Fortsett der forrige oppstart slapp: neste idrett og neste sted.
+      const t = d.tilstand || {};
+      const forrigeAi = Number.isInteger(t.ai) ? t.ai : ACTS.length - 1;
+      st.round = Number.isInteger(t.round) ? t.round : 0;
+      st.ai = (forrigeAi + 1) % ACTS.length;
+      if (st.ai === 0 && Number.isInteger(t.ai)) st.round++;
+      st.place = Number.isInteger(t.pi) ? (t.pi + 1) % PLACES.length : 0;
+      st.cur = makeAthlete(ACTS[st.ai], st.round);
+      layout(d.w, d.h, d.dpr);
+      meldAktivitet(); meldSted();
+      render();
+      last = performance.now();
+      frameId = raf(frame);
+    },
+    resize(d) { if (ctx) { layout(d.w, d.h, d.dpr); render(); } },
+    stopp() {
+      stoppet = true; caf(frameId);
+      if (iWorker) self.close();
+    },
+  };
+  if (iWorker) self.onmessage = e => { const f = api[e.data && e.data.type]; if (f) f(e.data); };
+  return api;
 }
 
-/* ---------- UI ---------- */
-const $ = id => document.getElementById(id);
-const ui = { sport: $('sport'), city: $('city'), coord: $('coord'), bib: $('bibNo'), msg: $('msg'), pct: $('pct'), fill: $('fill') };
-function swap(el, text, html) { el.classList.remove('in'); void el.offsetWidth; if (html) el.innerHTML = text; else el.textContent = text; el.classList.add('in'); }
-function describe() {
-  const A = st.cur, p = PLACES[st.place];
-  cvs.setAttribute('aria-label', `${A.gender === 'f' ? 'Kvinne' : 'Mann'} som ${A.sp.verb} foran ${p.name} i ${p.city.split(',')[0]}`);
-}
-const TEMPI = [1, 2, .5];
-$('btnPause').addEventListener('click', togglePause);
-$('btnAct').addEventListener('click', () => { nextActivity(); st.timer = 0; st.nextKind = 'place'; });
-$('btnPlace').addEventListener('click', () => { nextPlace(); st.timer = 0; st.nextKind = 'act'; });
-$('btnTempo').addEventListener('click', cycleTempo);
-function togglePause() {
-  st.paused = !st.paused;
-  $('btnPause').setAttribute('aria-pressed', String(st.paused));
-  $('lblPause').textContent = st.paused ? 'Spill av' : 'Pause';
-  $('icoPause').hidden = st.paused; $('icoPlay').hidden = !st.paused;
-}
-function cycleTempo() {
-  st.tempo = TEMPI[(TEMPI.indexOf(st.tempo) + 1) % TEMPI.length];
-  const label = st.tempo === .5 ? '½×' : `${st.tempo}×`;
-  $('lblTempo').textContent = label; $('btnTempo').setAttribute('aria-label', `Tempo ${label}`);
-}
-window.addEventListener('keydown', e => {
-  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-  if (e.code === 'Space' && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); togglePause(); }
-  else if (e.key === 'a' || e.key === 'A') $('btnAct').click();
-  else if (e.key === 's' || e.key === 'S') $('btnPlace').click();
-  else if (e.key === 't' || e.key === 'T') cycleTempo();
-});
+/* ---------- Hovedtråden: lag, tekst og livsløp ------------------ */
+(function () {
+  'use strict';
+  if (window.ATLasteskjerm || !document.body) return;
 
-/* ---------- start ---------- */
-st.cur = makeAthlete(ACTS[0], 0);
-layout();
-applyActivityUI(st.cur); applyPlaceUI();
-new ResizeObserver(() => { layout(); render(); }).observe(stage);
-let last = performance.now();
-function frame(now) {
-  const raw = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
-  const dt = st.paused ? 0 : raw * st.tempo * (reduceMotion ? .6 : 1);
-  update(dt, st.paused ? 0 : raw);
-  render();
-  requestAnimationFrame(frame);
-}
-render();
-requestAnimationFrame(frame);
+  const MIN_SYNLIG = 1500;             // ms – ikke blink forbi på en rask oppstart
+  const UTTONING = 480;                // ms – samme som transition i lasteskjerm.css
+  const NODSTOPP = 40000;              // ms – forsvinner uansett hvis appen aldri melder seg
+  const PAUSE_FOR_NY_START = 30 * 60 * 1000;
+  const K_TILSTAND = 'at-lasteskjerm';
+  const K_OPPSTART = 'at-oppstart-ms';
+  const K_GRUNN = 'at-lasteskjerm-grunn';
+  const K_TEMA = 'at-theme';           // mer.jsx: MER_THEME_KEY
+  const K_AKSENT = 'at-aksent';        // mer.jsx: MER_AKSENT_KEY
+  // Samme lys/mørk-varianter som MER_AKSENTER i mer.jsx.
+  const AKSENTER = {
+    lilla: ['#5E5CE6', '#7D7AFF'], blaa: ['#0A66D0', '#4C9AFF'], gronn: ['#1F7A47', '#3DCE7A'],
+    oransje: ['#B85A10', '#FF9F45'], rod: ['#C0224A', '#FF5C86'], grafitt: ['#2C2E36', '#D5D8DF'],
+  };
 
-// Liten API for integrering og testing
-window.Verdenslopet = {
-  nextActivity: () => $('btnAct').click(),
-  nextPlace: () => $('btnPlace').click(),
-  pause: () => { if (!st.paused) togglePause(); },
-  play: () => { if (st.paused) togglePause(); },
-  set(activity, place) {
-    if (activity !== undefined) { st.ai = (activity - 1 + ACTS.length) % ACTS.length; nextActivity(); st.actK = 1; st.prev = null; }
-    if (place !== undefined) { st.place = (place - 1 + PLACES.length) % PLACES.length; nextPlace(); st.placeK = 1; st.placePrev = -1; }
-  },
-  sports: ACTS.map(a => a.sport), places: PLACES.map(p => p.id),
-};
+  const les = (lager, k) => { try { return lager.getItem(k); } catch (e) { return null; } };
+  const skriv = (lager, k, v) => { try { lager.setItem(k, v); } catch (e) { /* privat modus o.l. */ } };
+  const fjern = (lager, k) => { try { lager.removeItem(k); } catch (e) { /* ignoreres */ } };
+
+  // Drakt og hovedfarge som i appen. mer.jsx har ikke kjørt ennå ved en
+  // kald start, så valget leses fra lageret; ved en omstart etter pause
+  // står data-theme allerede på <html>.
+  function palett() {
+    const valgt = document.documentElement.getAttribute('data-theme') || les(localStorage, K_TEMA);
+    const mork = valgt === 'dark' || (valgt !== 'light' &&
+      !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    const a = AKSENTER[les(localStorage, K_AKSENT)] || AKSENTER.lilla;
+    return mork
+      ? { mork: true, bg: '#0E0F13', ink: '#F4F5F7', aksent: a[1] }
+      : { mork: false, bg: '#F2F2F7', ink: '#000000', aksent: a[0] };
+  }
+
+  let aktiv = null;   // { el, motor, worker, ro, startet, ferdig }
+
+  function vis(grunn) {
+    if (aktiv) return;
+    const farger = palett();
+    const el = document.createElement('div');
+    el.className = 'ls';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-label', grunn === 'pause' ? 'Henter ferske data' : 'Starter AI Trener');
+    el.style.setProperty('--ls-bg', farger.bg);
+    el.style.setProperty('--ls-ink', farger.ink);
+    el.style.setProperty('--ls-aksent', farger.aksent);
+    el.innerHTML =
+      '<canvas class="ls-scene" aria-hidden="true"></canvas>' +
+      '<div class="ls-tekst" aria-hidden="true">' +
+        '<div class="ls-idrett"><span class="ls-bytt" data-felt="idrett"></span></div>' +
+        '<div class="ls-sted"><span class="ls-bytt" data-felt="sted"></span></div>' +
+        '<div class="ls-bar"><i></i><b></b></div>' +
+      '</div>' +
+      '<div class="ls-merke" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 2c.6 5.4 4.6 9.4 10 10-5.4.6-9.4 4.6-10 10-.6-5.4-4.6-9.4-10-10 5.4-.6 9.4-4.6 10-10z"/></svg>' +
+        'AI Trener</div>';
+    document.body.insertBefore(el, document.body.firstChild);
+
+    const felt = n => el.querySelector('[data-felt="' + n + '"]');
+    const bytt = (node, tekst) => {
+      if (!node) return;
+      node.classList.remove('inn'); void node.offsetWidth;
+      node.textContent = tekst;
+      node.classList.add('inn');
+    };
+
+    // Fremdriftslinja er en ren CSS-animasjon på transform, så den glir også
+    // mens hovedtråden er opptatt. Lengden er forrige oppstartstid.
+    const forventet = Math.min(20000, Math.max(2500, Number(les(localStorage, K_OPPSTART)) || 7000));
+    el.style.setProperty('--ls-tid', forventet + 'ms');
+
+    const onMelding = m => {
+      if (!m || !aktiv) return;
+      if (m.type === 'aktivitet') bytt(felt('idrett'), m.navn);
+      else if (m.type === 'sted') bytt(felt('sted'), m.tekst);
+      else if (m.type === 'tilstand') skriv(localStorage, K_TILSTAND, JSON.stringify({ ai: m.ai, pi: m.pi, round: m.round }));
+    };
+
+    const canvas = el.querySelector('canvas');
+    const r = el.getBoundingClientRect();
+    let tilstand = null;
+    try { tilstand = JSON.parse(les(localStorage, K_TILSTAND) || 'null'); } catch (e) { tilstand = null; }
+    const oppstart = {
+      type: 'start', w: r.width, h: r.height, dpr: window.devicePixelRatio || 1,
+      reduceMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
+      tilstand, palett: farger,
+    };
+
+    const a = aktiv = { el, motor: null, worker: null, ro: null, startet: performance.now(), ferdig: false, grunn };
+
+    // Reserve: samme motor på hovedtråden. Et lerret som er overført til en
+    // worker kan ikke brukes igjen, så det byttes ut med et nytt.
+    const paHovedtraden = () => {
+      if (a.ferdig || a.motor) return;
+      const gammelt = el.querySelector('.ls-scene');
+      const nytt = document.createElement('canvas');
+      nytt.className = 'ls-scene'; nytt.setAttribute('aria-hidden', 'true');
+      if (gammelt) gammelt.replaceWith(nytt); else el.insertBefore(nytt, el.firstChild);
+      const b = el.getBoundingClientRect();
+      const motor = lasteskjermMotor({
+        post: onMelding,
+        lerret: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+      });
+      motor.start(Object.assign({}, oppstart, { canvas: nytt, w: b.width, h: b.height }));
+      a.motor = motor;
+    };
+
+    let worker = null;
+    if (typeof canvas.transferControlToOffscreen === 'function' && typeof Worker === 'function' && typeof OffscreenCanvas === 'function') {
+      try {
+        const kilde = '(' + lasteskjermMotor.toString() + ')(null);';
+        const url = URL.createObjectURL(new Blob([kilde], { type: 'text/javascript' }));
+        worker = new Worker(url);
+        URL.revokeObjectURL(url);
+        worker.onmessage = e => onMelding(e.data);
+        // Krasjer workeren (f.eks. en nettleser med halv OffscreenCanvas-
+        // støtte), tegner vi videre på hovedtråden i stedet for å fryse.
+        worker.onerror = () => {
+          if (a.worker !== worker) return;
+          a.worker = null; worker.terminate();
+          paHovedtraden();
+        };
+        const off = canvas.transferControlToOffscreen();
+        worker.postMessage(Object.assign({ canvas: off }, oppstart), [off]);
+        a.worker = worker;
+      } catch (e) {
+        if (worker) worker.terminate();
+        a.worker = null;
+      }
+    }
+    if (!a.worker) paHovedtraden();
+
+    if (typeof ResizeObserver === 'function') {
+      aktiv.ro = new ResizeObserver(() => {
+        if (!aktiv) return;
+        const b = el.getBoundingClientRect();
+        const d = { type: 'resize', w: b.width, h: b.height, dpr: window.devicePixelRatio || 1 };
+        if (aktiv.worker) aktiv.worker.postMessage(d); else if (aktiv.motor) aktiv.motor.resize(d);
+      });
+      aktiv.ro.observe(el);
+    }
+    aktiv.nodstopp = setTimeout(ferdig, NODSTOPP);
+  }
+
+  function ferdig() {
+    const a = aktiv;
+    if (!a || a.ferdig) return;
+    a.ferdig = true;
+    clearTimeout(a.nodstopp);
+    // Husk hvor lang en vanlig oppstart er, så linja treffer neste gang.
+    if (a.grunn !== 'pause') {
+      const malt = performance.now();
+      const gammel = Number(les(localStorage, K_OPPSTART)) || malt;
+      skriv(localStorage, K_OPPSTART, String(Math.round(gammel * .6 + malt * .4)));
+    }
+    const vent = Math.max(0, MIN_SYNLIG - (performance.now() - a.startet));
+    setTimeout(() => {
+      a.el.classList.add('ls--ferdig', 'ls--ut');
+      setTimeout(() => {
+        if (a.ro) a.ro.disconnect();
+        if (a.worker) { a.worker.postMessage({ type: 'stopp' }); setTimeout(() => a.worker.terminate(), 100); }
+        if (a.motor) a.motor.stopp();
+        a.el.remove();
+        if (aktiv === a) aktiv = null;
+      }, UTTONING);
+    }, vent);
+  }
+
+  /* ---------- Tilbake etter en pause ----------
+     Har appen ligget i bakgrunnen i 30 min eller mer, lastes den på nytt så
+     dataene er ferske, og lasteskjermen dekker oppstarten. Ikke uten nett
+     (da er det ingenting å hente), og ikke hvis du står midt i en tekst. */
+  let skjultFra = 0;
+  const skriverNoe = () => {
+    const a = document.activeElement;
+    if (!a) return false;
+    const tekstfelt = a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|email|url|tel|number|)$/i.test(a.type || ''));
+    return tekstfelt && String(a.value || '').trim() !== '';
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { skjultFra = Date.now(); return; }
+    if (!skjultFra) return;
+    const borte = Date.now() - skjultFra;
+    skjultFra = 0;
+    if (borte < PAUSE_FOR_NY_START || navigator.onLine === false || skriverNoe()) return;
+    skriv(sessionStorage, K_GRUNN, 'pause');
+    vis('pause');
+    // To bilder, så lasteskjermen rekker å vises før siden byttes ut.
+    requestAnimationFrame(() => requestAnimationFrame(() => location.reload()));
+  });
+
+  window.ATLasteskjerm = { ferdig, vis };
+
+  const grunn = les(sessionStorage, K_GRUNN);
+  fjern(sessionStorage, K_GRUNN);
+  vis(grunn === 'pause' ? 'pause' : 'start');
+})();
+
+</script>
+<script>
+(function () {
+  const AKSENTER = [
+    ['lilla', 'Lilla', '#5E5CE6', '#7D7AFF'], ['blaa', 'Blå', '#0A66D0', '#4C9AFF'], ['gronn', 'Grønn', '#1F7A47', '#3DCE7A'],
+    ['oransje', 'Oransje', '#B85A10', '#FF9F45'], ['rod', 'Rød', '#C0224A', '#FF5C86'], ['grafitt', 'Grafitt', '#2C2E36', '#D5D8DF'],
+  ];
+  const root = document.documentElement;
+  const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const skriv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignoreres */ } };
+  const mork = () => {
+    const t = root.getAttribute('data-theme');
+    return t ? t === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  };
+  const prikker = document.querySelector('.prikker');
+  const klar = document.getElementById('klar');
+
+  function tegnStyr() {
+    const m = mork(), valgt = les('at-aksent') || 'lilla';
+    document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tema === 'dark') === m)));
+    prikker.innerHTML = '';
+    for (const [k, navn, lys, mrk] of AKSENTER) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.id = 'aksent-' + k; b.title = navn; b.setAttribute('aria-label', navn);
+      b.setAttribute('aria-pressed', String(k === valgt));
+      b.style.setProperty('--c', m ? mrk : lys);
+      b.addEventListener('click', () => { skriv('at-aksent', k); tegnStyr(); startPaNytt(); });
+      prikker.appendChild(b);
+    }
+    klar.textContent = document.querySelector('.ls') ? 'Appen er klar' : 'Start på nytt';
+  }
+
+  // Lukk den som vises (med uttoning), og vis en ny når den er borte.
+  let venter = false;
+  function startPaNytt() {
+    if (venter) return;
+    venter = true;
+    window.ATLasteskjerm.ferdig();
+    (function sjekk() {
+      if (document.querySelector('.ls')) return setTimeout(sjekk, 60);
+      skriv('at-oppstart-ms', '7000');
+      window.ATLasteskjerm.vis('start');
+      venter = false; tegnStyr();
+    })();
+  }
+
+  document.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => {
+    root.setAttribute('data-theme', b.dataset.tema);
+    tegnStyr(); startPaNytt();
+  }));
+  klar.addEventListener('click', () => {
+    if (document.querySelector('.ls')) {
+      window.ATLasteskjerm.ferdig();
+      (function sjekk() { if (document.querySelector('.ls')) return setTimeout(sjekk, 60); skriv('at-oppstart-ms', '7000'); tegnStyr(); })();
+    } else {
+      window.ATLasteskjerm.vis('start'); tegnStyr();
+    }
+  });
+  tegnStyr();
 })();
 </script>
 </body>
