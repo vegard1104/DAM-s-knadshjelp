@@ -16,11 +16,13 @@ Laget for å vises mens appen starter, så den har få elementer og få farger:
 - Bakgrunnen er appens egen (lys `#F2F2F7`, mørk `#0E0F13`), så overgangen
   til appen er sømløs.
 - Utøveren er et piktogram i idrettens farge fra appen, og bytter farge når
-  idretten bytter: løping oransje, sykling blå, langrenn lilla, svømming
-  turkis. Roing (grønn), skøyter (isblå) og rullestolløp (rosa) låner farger
-  fra samme familie. Armen og beinet bak er en blekere variant av samme
-  farge. Kvinner har hestehale; ellers er det ingen drakter, hudfarger eller
-  hodeplagg.
+  idretten eller kjønnet bytter. Menn har idrettens farge: løping oransje,
+  sykling blå, langrenn lilla, svømming turkis. Roing (grønn), skøyter
+  (isblå) og rullestolløp (rosa) låner farger fra samme familie. Kvinner får
+  en nabofarge med samme lyshet (løping gyllen, sykling turkisblå osv.), så
+  to utøvere på rad aldri har samme farge. Armen og beinet bak er en blekere
+  variant av samme farge. Kvinner har hestehale; ellers er det ingen
+  drakter, hudfarger eller hodeplagg.
 - Utstyr (sykkel, ski, staver, båt, rullestol) er i en nøytral grå.
 - Landemerket er én blek silhuett. Buer, urskive og vinduer er skåret ut av
   flaten i stedet for å tegnes i en ny farge.

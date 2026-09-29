@@ -153,9 +153,9 @@ try {
 
    Stil (Vegard 28.09: «forenkle … trenger ikke så mye detaljer og
    farger»): appens egen bakgrunn, utøveren som piktogram i idrettens
-   farge fra appen (bytter når idretten bytter), landemerket som én blek
-   silhuett og en tynn bakkelinje. Ingen himmel, sol, skyer, rekvisitter
-   eller startnummer.
+   farge fra appen, landemerket som én blek silhuett og en tynn bakkelinje.
+   Fargen bytter når idretten eller kjønnet bytter. Ingen himmel, sol,
+   skyer, rekvisitter eller startnummer.
 
    Hvorfor egen tråd: Babel kompilerer de 36 JSX-filene på hovedtråden
    ved hver oppstart. Målt 28.09: 7,4 s til «app-oppe», hvorav 6,5 s var
@@ -227,11 +227,11 @@ function lasteskjermMotor(vert) {
   function settPalett(p) {
     p = p || {};
     const bg = p.bg || '#F2F2F7', ink = p.ink || '#000000', ak = p.aksent || '#5E5CE6', mork = !!p.mork;
-    // Kroppen i idrettens farge: nær side i full farge, armen og beinet bak
-    // blandet halvveis mot bakgrunnen.
+    // Kroppen i idrettens farge (én per kjønn): nær side i full farge, armen
+    // og beinet bak blandet halvveis mot bakgrunnen.
     const kropp = c => ({ naer: css(c), fjern: css(mix(c, bg, .5)) });
     const idrett = {};
-    for (const k in (p.idrett || {})) idrett[k] = kropp(p.idrett[k]);
+    for (const k in (p.idrett || {})) idrett[k] = { m: kropp(p.idrett[k].m), f: kropp(p.idrett[k].f) };
     P = {
       bg: css(bg),
       idrett,
@@ -973,7 +973,7 @@ function lasteskjermMotor(vert) {
     x.setTransform(DPR * U, 0, 0, DPR * U, DPR * U * AX, DPR * U * AY);
     x.lineCap = 'round'; x.lineJoin = 'round';
     g = x;
-    K = P.idrett[A.key] || P.reserve;
+    K = (P.idrett[A.key] || {})[A.gender] || P.reserve;
     A.sp.draw(A);
   }
   function drawAthlete(A, L, alpha, dxU) {
@@ -1117,14 +1117,23 @@ function lasteskjermMotor(vert) {
     oransje: ['#B85A10', '#FF9F45'], rod: ['#C0224A', '#FF5C86'], grafitt: ['#2C2E36', '#D5D8DF'],
   };
 
-  // Utøveren har idrettens farge fra appen (styles.css, samme verdi i begge
-  // drakter). Roing, skøyter og rullestolløp har ingen egen idrett i appen og
-  // låner en farge fra samme familie som ikke ligger ved siden av i rekka.
-  // Verdiene etter variabelnavnet er reserve hvis stilarket ikke er lastet.
+  // Menn har idrettens farge fra appen (styles.css, samme verdi i begge
+  // drakter; hex-verdien er reserve hvis stilarket ikke er lastet). Roing,
+  // skøyter og rullestolløp har ingen egen idrett i appen og låner en farge
+  // fra samme familie.
+  // Kvinner har en nabofarge: samme lyshet og metning (oklch L 0,66), men
+  // tonen 30–45° unna idrettens. Da bytter fargen også når bare kjønnet
+  // bytter (løper mann → løper kvinne), og idretten kjennes fortsatt igjen.
+  // Nabofargene er regnet ut så to utøvere på rad aldri ligner hverandre
+  // (ΔE i OKLab ≥ 0,079), også mellom rundene der kjønnene bytter plass.
   const IDRETTSFARGER = {
-    run: ['--run', '#DC6E41'], bike: ['--bike', '#5992E7'], ski: ['--xc', '#9680DF'],
-    swim: ['--swim', '#1AA69F'], row: ['--walk', '#71A342'], skate: ['--alpine', '#1AA1C9'],
-    wheel: ['--str', '#C86EB0'],
+    run:   { m: ['--run', '#DC6E41'],    f: '#C18501' },
+    bike:  { m: ['--bike', '#5992E7'],   f: '#05A3BE' },
+    ski:   { m: ['--xc', '#9680DF'],     f: '#C170BB' },
+    swim:  { m: ['--swim', '#1AA69F'],   f: '#059ED9' },
+    row:   { m: ['--walk', '#71A342'],   f: '#AC9008' },
+    skate: { m: ['--alpine', '#1AA1C9'], f: '#09A996' },
+    wheel: { m: ['--str', '#C86EB0'],    f: '#A67AD6' },
   };
 
   const les = (lager, k) => { try { return lager.getItem(k); } catch (e) { return null; } };
@@ -1142,9 +1151,9 @@ function lasteskjermMotor(vert) {
     const stil = getComputedStyle(document.documentElement);
     const idrett = {};
     for (const k in IDRETTSFARGER) {
-      const [navn, reserve] = IDRETTSFARGER[k];
+      const [navn, reserve] = IDRETTSFARGER[k].m;
       const v = stil.getPropertyValue(navn).trim();
-      idrett[k] = /^#[0-9a-f]{6}$/i.test(v) ? v : reserve;
+      idrett[k] = { m: /^#[0-9a-f]{6}$/i.test(v) ? v : reserve, f: IDRETTSFARGER[k].f };
     }
     return mork
       ? { mork: true, bg: '#0E0F13', ink: '#F4F5F7', aksent: a[1], idrett }
