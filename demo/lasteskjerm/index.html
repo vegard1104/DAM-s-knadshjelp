@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Verdensløpet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap">
+<style>
+  /* Forhåndsvisning: lasteskjermen fyller siden; en liten styrelinje ligger over den. */
+  :root {
+    --bg: #F2F2F7; --fg: #000000; --fg2: #606066; --flate: rgba(255, 255, 255, .78); --kant: rgba(0, 0, 0, .08);
+    --f-ui: -apple-system, 'SF Pro Text', 'Instrument Sans', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0E0F13; --fg: #F4F5F7; --fg2: #9BA2AE; --flate: rgba(29, 32, 39, .82); --kant: rgba(255, 255, 255, .1); color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #0E0F13; --fg: #F4F5F7; --fg2: #9BA2AE; --flate: rgba(29, 32, 39, .82); --kant: rgba(255, 255, 255, .1); color-scheme: dark; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-ui); overflow: hidden; }
+
+  .styr {
+    position: fixed; z-index: 2147483001; left: 0; right: 0; margin-inline: auto; width: max-content;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 10px;
+    max-width: calc(100% - 32px); padding: 6px 8px; border-radius: 20px;
+    background: var(--flate); border: 1px solid var(--kant);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    font-size: 13px;
+  }
+  .seg { display: flex; gap: 2px; }
+  .seg button, .klar {
+    font: inherit; font-weight: 600; color: var(--fg2); background: none; border: 0;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { color: var(--fg); background: var(--kant); }
+  .klar { color: var(--fg); background: var(--kant); }
+  button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  .appen {
+    height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px;
+    padding-inline: 16px; text-align: center;
+  }
+  .appen h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  .appen p { margin: 0; color: var(--fg2); max-width: 32ch; line-height: 1.45; }
+</style>
+<style>
+/* =============================================================
+   Lasteskjermen «Verdensløpet» — lag og tekst.
+   Scenen tegnes av lasteskjerm.js. Alt som skal bevege seg mens
+   hovedtråden er opptatt (fremdriftslinja, tekstbyttene, uttoningen)
+   er CSS-animasjoner på transform/opacity, så nettleseren kan kjøre dem
+   uten hovedtråden.
+   Fargene settes av lasteskjerm.js (--ls-bg, --ls-ink, --ls-aksent) ut
+   fra drakten og hovedfargen brukeren har valgt i appen. De styres ikke
+   av styles.css, fordi mer.jsx ikke har satt data-theme ennå når
+   lasteskjermen vises.
+   ============================================================= */
+.ls {
+  --ls-bg: #F2F2F7;
+  --ls-ink: #000000;
+  --ls-aksent: #5E5CE6;
+  --ls-ink2: color-mix(in srgb, var(--ls-ink) 55%, var(--ls-bg));
+  --ls-ink3: color-mix(in srgb, var(--ls-ink) 42%, var(--ls-bg));
+  position: fixed; inset: 0; z-index: 2147483000;
+  overflow: hidden;
+  background: var(--ls-bg);
+  color: var(--ls-ink);
+  font-family: var(--f-ui, -apple-system, 'Instrument Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none; user-select: none;
+  touch-action: none;
+  transition: opacity .48s ease;
+}
+.ls--ut { opacity: 0; pointer-events: none; }
+.ls-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* Teksten står rett under bakkelinja, som ligger på 60 % av høyden
+   (BAKKE i lasteskjerm.js – endres de, må begge endres). */
+.ls-tekst {
+  position: absolute; left: 16px; right: 16px; top: 60%;
+  margin-top: 30px;
+  display: grid; justify-items: center; gap: 3px;
+  text-align: center;
+}
+.ls-idrett { font-size: 17px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; }
+.ls-sted { font-size: 13px; line-height: 1.3; font-weight: 500; color: var(--ls-ink2); }
+.ls-bytt { display: inline-block; }
+.ls-bytt.inn { animation: ls-inn .5s cubic-bezier(.2, .8, .2, 1); }
+@keyframes ls-inn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* Fremdrift. Linja fyller seg mot 92 % på forrige oppstartstid (--ls-tid);
+   når appen er klar tones en full linje inn over den. */
+.ls-bar {
+  position: relative; width: 112px; height: 3px; margin-top: 14px;
+  border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--ls-ink) 10%, transparent);
+}
+.ls-bar i, .ls-bar b {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: var(--ls-aksent);
+  transform-origin: left center;
+}
+.ls-bar i { transform: scaleX(0); animation: ls-fram var(--ls-tid, 7s) cubic-bezier(.25, .7, .3, 1) forwards; }
+.ls-bar b { opacity: 0; transition: opacity .2s ease; }
+.ls--ferdig .ls-bar b { opacity: 1; }
+@keyframes ls-fram { to { transform: scaleX(.92); } }
+
+.ls-merke {
+  position: absolute; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  display: flex; justify-content: center; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ls-ink3);
+}
+.ls-merke svg { width: 13px; height: 13px; fill: var(--ls-aksent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-bytt.inn { animation: none; }
+}
+
+</style>
+
+</head>
+<body>
+<div class="styr" role="toolbar" aria-label="Forhåndsvisning">
+  <div class="seg" role="group" aria-label="Drakt">
+    <button type="button" id="tema-lys" data-tema="light">Lys</button>
+    <button type="button" id="tema-mork" data-tema="dark">Mørk</button>
+  </div>
+  <button type="button" class="klar" id="klar">Appen er klar</button>
+</div>
+<main class="appen">
+  <h1>Appen er oppe</h1>
+  <p>Lasteskjermen toner seg ut idet appen er klar. Trykk «Start på nytt» for å se den igjen.</p>
+</main>
+
+<script>
+/* Forhåndsvisningen starter alltid på første idrett og sted, og med en
+   oppstartstid på 7 s for fremdriftslinja. */
+try {
+  localStorage.removeItem('at-lasteskjerm');
+  localStorage.setItem('at-oppstart-ms', '7000');
+} catch (e) { /* uten lager vises standardvalgene */ }
+</script>
+<script>
+/* =============================================================
+   AI Trener — lasteskjermen «Verdensløpet»
+   Vises mens appen starter: en utøver i aktivitet foran et kjent
+   landemerke. Idretten byttes, 1,5 s etter byttes stedet, og så står
+   kombinasjonen i 3,2 s før neste idrett.
+
+   Stil (Vegard 28.09: «forenkle … trenger ikke så mye detaljer og
+   farger»): appens egen bakgrunn, utøveren som piktogram i idrettens
+   farge fra appen, landemerket som én blek silhuett og en tynn bakkelinje.
+   Fargen bytter når idretten eller kjønnet bytter. Ingen himmel, sol,
+   skyer, rekvisitter eller startnummer.
+
+   Hvorfor egen tråd: Babel kompilerer de 36 JSX-filene på hovedtråden
+   ved hver oppstart. Målt 28.09: 7,4 s til «app-oppe», hvorav 6,5 s var
+   lange oppgaver (lengste 0,66 s). En animasjon på hovedtråden ville stått
+   stille nesten hele tiden den skulle vises. Scenen tegnes derfor i en
+   Web Worker på et OffscreenCanvas. Nettlesere uten det tegner på
+   hovedtråden i stedet (hakker under kompileringen, men virker).
+
+   Livsløp:
+   · lastes synkront først i <body>, før skallet, så skallet aldri blinker
+   · app.jsx kaller ATLasteskjerm.ferdig() idet appen monterer
+   · har appen ligget i bakgrunnen i 30 min eller mer, lastes den på nytt
+     når du kommer tilbake, og lasteskjermen vises mens den starter
+   · tilstanden (neste idrett og sted) huskes i localStorage, så hver
+     oppstart fortsetter der forrige slapp
+
+   Ren JS, ikke JSX: fila må kjøre før Babel er lastet.
+   ============================================================= */
+
+/* ---------- Scenemotoren ----------------------------------------
+   Kjører enten i en Web Worker (vert = null) eller på hovedtråden
+   (vert = { post, lerret }). Den kjenner ikke DOM-en: den får et lerret,
+   en størrelse og fargene, og sender tekst til hovedtråden med meldinger.
+   Funksjonen gjøres om til tekst og startes som worker, så den kan ikke
+   bruke noe utenfor seg selv. */
+function lasteskjermMotor(vert) {
+  'use strict';
+  const iWorker = !vert;
+  if (iWorker) {
+    vert = {
+      post: m => self.postMessage(m),
+      lerret: (w, h) => new OffscreenCanvas(w, h),
+    };
+  }
+  const raf = typeof self.requestAnimationFrame === 'function'
+    ? f => self.requestAnimationFrame(f)
+    : f => setTimeout(() => f(performance.now()), 16);
+  const caf = typeof self.cancelAnimationFrame === 'function'
+    ? id => self.cancelAnimationFrame(id)
+    : id => clearTimeout(id);
+
+  const TAU = Math.PI * 2, D2R = Math.PI / 180;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const easeIn = t => t * t * t;
+  const fract = x => x - Math.floor(x);
+
+  /* ---------- farger ---------- */
+  function hx(c) {
+    if (typeof c !== 'string') return c;
+    let s = c.slice(1);
+    if (s.length === 3) s = s.replace(/./g, '$&$&');
+    const n = parseInt(s, 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function mix(a, b, k) { a = hx(a); b = hx(b); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+  function css(c, al) {
+    c = hx(c);
+    const r = Math.round(c[0]), gg = Math.round(c[1]), b = Math.round(c[2]);
+    return al === undefined || al >= 1 ? `rgb(${r},${gg},${b})` : `rgba(${r},${gg},${b},${Math.max(0, al).toFixed(3)})`;
+  }
+
+  // Alle fargene i scenen kommer fra appen: bakgrunn og tekst fra drakten,
+  // utøveren fra idrettsfargene. Resten er blandinger av dem.
+  let P = null;
+  function settPalett(p) {
+    p = p || {};
+    const bg = p.bg || '#F2F2F7', ink = p.ink || '#000000', ak = p.aksent || '#5E5CE6', mork = !!p.mork;
+    // Kroppen i idrettens farge (én per kjønn): nær side i full farge, armen
+    // og beinet bak blandet halvveis mot bakgrunnen.
+    const kropp = c => ({ naer: css(c), fjern: css(mix(c, bg, .5)) });
+    const idrett = {};
+    for (const k in (p.idrett || {})) idrett[k] = { m: kropp(p.idrett[k].m), f: kropp(p.idrett[k].f) };
+    P = {
+      bg: css(bg),
+      idrett,
+      reserve: kropp(ak),                               // idrett uten egen farge
+      utstyr: css(mix(bg, ink, mork ? .52 : .45)),      // sykkel, ski, båt …
+      utstyrFjern: css(mix(bg, ink, mork ? .3 : .25)),
+      lm: css(mix(bg, ink, mork ? .1 : .075)),          // landemerket
+      linje: mix(bg, ink, mork ? .32 : .24),            // bakken
+      vann: css(bg, .62),                               // det som er under vannflaten
+    };
+  }
+
+  /* ---------- vektorer ---------- */
+  const add = (p, v, L = 1) => [p[0] + v[0] * L, p[1] + v[1] * L];
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const norm = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
+  const along = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  const dn = deg => { const r = deg * D2R; return [Math.sin(r), Math.cos(r)]; };   // 0 = rett ned, + = framover
+  const up = deg => { const r = deg * D2R; return [Math.sin(r), -Math.cos(r)]; };  // 0 = rett opp, + = framover
+  const limb = (p, deg, L) => add(p, dn(deg), L);
+  // To-ledds invers kinematikk. Returnerer [midtledd, endepunkt].
+  function ik(a, b, L1, L2, bend) {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const d0 = Math.hypot(dx, dy) || 1e-3;
+    const d = clamp(d0, Math.abs(L1 - L2) + .5, L1 + L2 - .05);
+    const base = Math.atan2(dy, dx);
+    const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+    return [
+      [a[0] + Math.cos(base + bend * A) * L1, a[1] + Math.sin(base + bend * A) * L1],
+      [a[0] + dx / d0 * d, a[1] + dy / d0 * d]
+    ];
+  }
+
+  /* ---------- tegneprimitiver (g = aktiv kontekst) ---------- */
+  let g = null;
+  function seg(a, b, w, c) { g.lineWidth = w; g.strokeStyle = c; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  function dot(p, r, c) { g.fillStyle = c; g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.fill(); }
+  function ring(p, r, w, c) { g.lineWidth = w; g.strokeStyle = c; g.beginPath(); g.arc(p[0], p[1], r, 0, TAU); g.stroke(); }
+  function sti(pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); }
+  function poly(pts, c) { g.fillStyle = c; sti(pts); g.fill(); }
+  function box(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+  function roundArch(x, yb, w, h, c) {
+    g.fillStyle = c; g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h + w / 2);
+    g.arc(x, yb - h + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
+  }
+  function pointArch(x, yb, w, h, c) {
+    g.fillStyle = c; g.beginPath(); g.moveTo(x - w / 2, yb); g.lineTo(x - w / 2, yb - h * .6);
+    g.quadraticCurveTo(x - w / 2, yb - h * .92, x, yb - h); g.quadraticCurveTo(x + w / 2, yb - h * .92, x + w / 2, yb - h * .6);
+    g.lineTo(x + w / 2, yb); g.closePath(); g.fill();
+  }
+  // Skjærer ut av det som alt er tegnet (a < 1 gir en lysere flate i
+  // stedet for et hull). Gir buer, vinduer og skiller uten en ny farge.
+  const UT = '#000';
+  function ut(fn, a = 1) { g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = a; fn(); g.restore(); }
+
+  /* ================================================================
+     KROPP – piktogram i idrettens farge. Enheter: ca. 100 = en person.
+     y = 0 er bakken. K settes per utøver før den tegnes.
+     ================================================================ */
+  let K = null;
+  const farge = far => far ? K.fjern : K.naer;
+
+  function drawLeg(hip, knee, foot, far, o = {}) {
+    const c = farge(far);
+    seg(hip, knee, 9.4, c);
+    seg(knee, foot, 7.8, c);
+    const d = norm(sub(foot, knee));
+    if (o.toe) { seg(foot, add(foot, d, 5), 4.4, c); return; }
+    if (o.shoe === false) return;
+    const f = o.footDir || [d[1], -d[0]];
+    const b = add(foot, d, 1.2);
+    seg(add(b, f, -1.4), add(b, f, 5.2), 4.6, c);
+  }
+  // Den nære armen får en smal luftspalte rundt underarmen, så den skiller
+  // seg fra kroppen den krysser (klassisk piktogramgrep). Ikke der hånda
+  // holder i noe (styre, drivring), da ville spalten kuttet utstyret.
+  function drawArm(sh, el, hand, far, luft = true) {
+    const c = farge(far);
+    if (!far && luft) ut(() => seg(el, hand, 9.6, UT));
+    seg(sh, el, 7.2, c);
+    seg(el, hand, 6.2, c);
+    dot(hand, 3.3, c);
+  }
+  function drawTorso(hip, neck, A) {
+    seg(hip, neck, A.gender === 'f' ? 12.2 : 13.4, K.naer);
+  }
+  function drawHead(neck, hc, A, o = {}) {
+    const r = A.gender === 'f' ? 6.9 : 7.3;
+    seg(neck, along(neck, hc, .6), 5.2, K.naer);
+    g.save(); g.translate(hc[0], hc[1]); if (o.rot) g.rotate(o.rot);
+    // hestehale – det eneste som skiller kvinne og mann
+    if (A.gender === 'f' && !o.badehette) {
+      const s = o.sway || 0;
+      g.strokeStyle = K.naer; g.lineWidth = 4.4;
+      g.beginPath(); g.moveTo(-r * .6, -r * .5);
+      g.quadraticCurveTo(-r - 4.5, -r * .75 + s * 1.2, -r - 9, 1.2 + s * 3.4); g.stroke();
+      g.lineWidth = 2.6; g.beginPath(); g.moveTo(-r - 6.5, -1.2 + s * 2.3); g.lineTo(-r - 11, 3.6 + s * 4.2); g.stroke();
+    }
+    dot([0, 0], r, K.naer);
+    g.restore();
+  }
+  function wheel(c, R, rot, col) {
+    ring(c, R - 1.2, 2.4, col);
+    g.lineWidth = 1; g.strokeStyle = col; g.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = rot + i * TAU / 3;
+      g.moveTo(c[0], c[1]); g.lineTo(c[0] + Math.cos(a) * (R - 2.4), c[1] + Math.sin(a) * (R - 2.4));
+    }
+    g.stroke();
+  }
+  // Det som er under vannflaten tones mot bakgrunnen.
+  function underVann(wl, t, bolge) {
+    g.save(); g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = P.vann; g.beginPath(); g.moveTo(-200, wl);
+    for (let x = -200; x <= 200; x += 8) g.lineTo(x, wl + Math.sin(x * .09 + t * 5) * bolge);
+    g.lineTo(200, 120); g.lineTo(-200, 120); g.closePath(); g.fill(); g.restore();
+  }
+
+  /* ================================================================
+     IDRETTER
+     ================================================================ */
+  const SPORTS = {};
+
+  /* ---- Løping ---- */
+  SPORTS.run = {
+    name: 'Løping', ground: 'land', speed: 1,
+    draw(A) {
+      const th = A.t / .68 * TAU;
+      const hip = [0, -53.4 + 2.2 * Math.cos(2 * th)];
+      const lean = 11 + 1.5 * Math.cos(2 * th);
+      const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5);
+      const hc = add(neck, up(lean + 6), 9.2);
+      const leg = ph => {
+        const a = 10 + 36 * Math.sin(ph), f = 16 + 100 * Math.pow(Math.max(0, Math.cos(ph + .3)), 2);
+        const k = limb(hip, a, 26); return [k, limb(k, a - f, 26)];
+      };
+      const arm = ph => {
+        const a = 4 - 42 * Math.sin(ph), f = 88 - 16 * Math.sin(ph);
+        const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
+      };
+      const ln = leg(th), lf = leg(th + Math.PI), an = arm(th), af = arm(th + Math.PI);
+      drawArm(sh, af[0], af[1], true);
+      drawLeg(hip, lf[0], lf[1], true);
+      drawTorso(hip, neck, A);
+      drawLeg(hip, ln[0], ln[1], false);
+      drawHead(neck, hc, A, { sway: Math.sin(2 * th - .6) });
+      drawArm(sh, an[0], an[1], false);
+    }
+  };
+
+  /* ---- Sykling ---- */
+  SPORTS.bike = {
+    name: 'Sykling', ground: 'land', speed: 2.1,
+    draw(A) {
+      const cad = A.t / .6 * TAU, R = 17.5, rot = A.dist / R;
+      const rear = [-29, -R], front = [30, -R], bb = [0, -12.5];
+      const hip = [-12, -53], lean = 57 + 1.2 * Math.sin(cad * 2);
+      const tv = up(lean), neck = add(hip, tv, 28.5), sh = add(hip, tv, 25);
+      const hc = add(neck, [6, -5.2]);
+      const cr = 8.5;
+      const pn = [bb[0] + Math.cos(cad) * cr, bb[1] + Math.sin(cad) * cr];
+      const pf = [bb[0] - Math.cos(cad) * cr, bb[1] - Math.sin(cad) * cr];
+      const hood = [28, -47.2];
+      const kn = ik(hip, pn, 26, 25, -1), kf = ik(hip, pf, 26, 25, -1);
+      const en = ik(sh, hood, 16, 14.5, 1), ef = ik(sh, [hood[0] - 1.2, hood[1] - .8], 16, 14.5, 1);
+      const u = P.utstyr;
+      wheel(rear, R, rot, u); wheel(front, R, rot, u);
+      seg(bb, pf, 2.2, P.utstyrFjern);
+      drawLeg(hip, kf[0], kf[1], true, { footDir: [1, .1] });
+      drawArm(sh, ef[0], ef[1], true);
+      const seatC = [-8.5, -39], htTop = [21, -42.5], htBot = [23.5, -33];
+      seg(rear, bb, 2.4, u); seg(rear, seatC, 2.2, u);
+      seg(bb, seatC, 2.8, u); seg(seatC, htTop, 2.8, u); seg(bb, htBot, 3, u);
+      seg(htTop, htBot, 3.2, u); seg(htBot, front, 2.6, u);
+      seg(seatC, [-10.5, -48], 2.2, u); seg([-15.5, -49.4], [-6.5, -49.9], 3, u);
+      seg(htTop, [25, -45.5], 2.4, u);
+      g.strokeStyle = u; g.lineWidth = 2.2; g.beginPath(); g.moveTo(25, -45.5); g.lineTo(28.5, -46.8);
+      g.quadraticCurveTo(32.5, -45.5, 31.2, -40.5); g.quadraticCurveTo(30.2, -37.8, 27.2, -38.4); g.stroke();
+      drawTorso(hip, neck, A);
+      drawLeg(hip, kn[0], kn[1], false, { footDir: [1, .1] });
+      seg(bb, pn, 2.4, u);
+      drawHead(neck, hc, A, { sway: Math.sin(cad) * .4 });
+      drawArm(sh, en[0], en[1], false, false);
+    }
+  };
+
+  /* ---- Langrenn (klassisk diagonalgang) ---- */
+  SPORTS.ski = {
+    name: 'Langrenn', ground: 'land', speed: 1.3,
+    draw(A) {
+      const th = A.t / 1.15 * TAU;
+      const hip = [0, -49.5 + 1.6 * Math.cos(2 * th)];
+      const lean = 19 + 5 * Math.cos(2 * th + .6);
+      const tv = up(lean), neck = add(hip, tv, 29), sh = add(hip, tv, 25.5), hc = add(neck, up(lean + 2), 9);
+      const foot = (ph, dy) => {
+        const lift = 7.5 * Math.pow(Math.max(0, Math.cos(ph + Math.PI / 2 - .55)), 6);
+        return { a: [21 * Math.sin(ph), -3 - lift + dy], lift };
+      };
+      const arm = ph => {
+        const a = 12 - 55 * Math.sin(ph), f = 18 - 12 * Math.sin(ph);
+        const e = limb(sh, a, 16), h = limb(e, a + f, 14.5);
+        const Lp = 72;
+        let b = Math.acos(clamp(-h[1] / Lp, 0, 1));
+        if (Math.cos(ph) < 0) {
+          const s = ((((ph - Math.PI / 2) % TAU) + TAU) % TAU) / Math.PI;
+          b += .5 * Math.sin(Math.PI * clamp(s, 0, 1));
+        }
+        return { e, h, tip: [h[0] - Math.sin(b) * Lp, h[1] + Math.cos(b) * Lp] };
+      };
+      const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
+      const kn = ik(hip, fn.a, 26, 25.5, -1), kf = ik(hip, ff.a, 26, 25.5, -1);
+      const an = arm(th), af = arm(th + Math.PI);
+      const utstyr = far => far ? P.utstyrFjern : P.utstyr;
+      const ski = (f, far) => {
+        const b = [f.a[0], f.a[1] + 3], r = f.lift * 1.1 * D2R, d = [Math.cos(r), Math.sin(r)];
+        const tip = add(b, d, 48), tail = add(b, d, -42), c = utstyr(far);
+        const knekk = add(tip, d, -6);
+        seg(tail, knekk, 2.2, c);
+        g.strokeStyle = c; g.lineWidth = 2.2; g.beginPath(); g.moveTo(knekk[0], knekk[1]);
+        g.quadraticCurveTo(tip[0], tip[1], tip[0] + 1.5, tip[1] - 3.2); g.stroke();
+      };
+      const boot = (f, far) => seg([f.a[0] - 2, f.a[1] + 1], [f.a[0] + 5.5, f.a[1] + 1.2], 5, farge(far));
+      const pole = (p, far) => {
+        const c = utstyr(far);
+        seg(p.h, p.tip, 1.7, c);
+        const d = norm(sub(p.tip, p.h)), q = add(p.h, d, 64), n = [-d[1], d[0]];
+        seg(add(q, n, -2.4), add(q, n, 2.4), 1.3, c);
+      };
+      pole(af, true); ski(ff, true);
+      drawLeg(hip, kf[0], kf[1], true, { shoe: false }); boot(ff, true);
+      drawArm(sh, af.e, af.h, true);
+      drawTorso(hip, neck, A);
+      ski(fn, false);
+      drawLeg(hip, kn[0], kn[1], false, { shoe: false }); boot(fn, false);
+      drawHead(neck, hc, A, { sway: Math.sin(2 * th) * .7 });
+      drawArm(sh, an.e, an.h, false); pole(an, false);
+    }
+  };
+
+  /* ---- Svømming (crawl) ---- */
+  SPORTS.swim = {
+    name: 'Svømming', ground: 'water', speed: .55,
+    draw(A) {
+      const T = 1.35, q = fract(A.t / T), th = q * TAU, wl = -7;
+      const hip = [-16, wl + 4.2 + .5 * Math.sin(2 * th)];
+      const tv = up(85.5), neck = add(hip, tv, 28), sh = add(hip, tv, 25);
+      const breathe = (q > .45 && q < .8) ? Math.sin((q - .45) / .35 * Math.PI) : 0;
+      const hc = add(neck, [8.6, -1.2 - 2.4 * breathe]);
+      const leg = ph => {
+        const a = -91 + 9 * Math.sin(3 * ph), f = 8 + 16 * Math.max(0, Math.sin(3 * ph + 1.2));
+        const k = limb(hip, a, 26); return [k, limb(k, a - f, 25)];
+      };
+      const arm = qq => {
+        qq = fract(qq);
+        const a = 90 - 360 * qq;
+        const f = qq < .5 ? -38 * Math.sin(Math.PI * qq / .5) : 105 * Math.sin(Math.PI * (qq - .5) / .5);
+        const e = limb(sh, a, 16); return [e, limb(e, a + f, 14.5)];
+      };
+      const ln = leg(th), lf = leg(th + Math.PI), an = arm(q), af = arm(q + .5);
+      drawArm(sh, af[0], af[1], true);
+      drawLeg(hip, lf[0], lf[1], true, { toe: true });
+      drawTorso(hip, neck, A);
+      drawLeg(hip, ln[0], ln[1], false, { toe: true });
+      drawHead(neck, hc, A, { rot: Math.PI / 2 - .3 * breathe, badehette: true });
+      drawArm(sh, an[0], an[1], false);
+      underVann(wl, A.t, 1.1);
+    }
+  };
+
+  /* ---- Roing (singlesculler – roeren ser bakover) ---- */
+  SPORTS.row = {
+    name: 'Roing', ground: 'water', speed: 1.35,
+    draw(A) {
+      const T = 1.9, u = fract(A.t / T), wl = -6;
+      let legs, back, arms;
+      if (u < .42) { const d = u / .42; legs = smooth(0, .62, d); back = smooth(.28, .85, d); arms = smooth(.58, 1, d); }
+      else { const r = (u - .42) / .58; arms = 1 - smooth(0, .3, r); back = 1 - smooth(.12, .48, r); legs = 1 - smooth(.35, 1, r); }
+      const bladeIn = smooth(0, .05, u) * (1 - smooth(.39, .45, u));
+      const square = Math.max(bladeIn, smooth(.86, .96, u));
+      g.save(); g.scale(-1, 1);
+      const hip = [lerp(3, -19, legs), wl - 12.5], feet = [29, wl - 8];
+      const kn = ik(hip, feet, 26, 25, -1);
+      const lean = lerp(26, -24, back);
+      const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean * .5 + 4), 9);
+      const nrm = [-tv[1], tv[0]];
+      const ext = add(sh, [29.5, 5]), chest = add(add(hip, tv, 14), nrm, 8.5);
+      const hand = along(ext, chest, arms); hand[1] += (1 - bladeIn) * 2.2;
+      const el = ik(sh, hand, 16, 14.5, 1);
+      const pin = [15, wl - 14];
+      const oar = (dx, dy, far) => {
+        const h = [hand[0] + dx, hand[1] + dy];
+        const b = [pin[0] + (pin[0] - h[0]) * 2, lerp(wl - 6, wl + 1.5, bladeIn) + dy];
+        const d = norm(sub(b, h)), c = far ? P.utstyrFjern : P.utstyr;
+        seg(h, b, 1.7, c);
+        seg(b, add(b, d, 8.5), lerp(1.7, 4.6, square), c);
+      };
+      oar(1, -1.4, true);
+      // skrog, sete og fotbrett
+      const u2 = P.utstyr;
+      g.fillStyle = u2; g.beginPath(); g.moveTo(-66, wl - 2.4); g.lineTo(70, wl - 3.2);
+      g.quadraticCurveTo(40, wl + 3.4, 0, wl + 3.1); g.quadraticCurveTo(-45, wl + 2.7, -66, wl - 2.4); g.closePath(); g.fill();
+      seg([hip[0] - 4.5, hip[1] + 3.2], [hip[0] + 4.5, hip[1] + 3.2], 3, u2);
+      seg([28.5, wl - 3.5], [31.5, wl - 12], 2.4, u2);
+      drawArm(sh, el[0], el[1], true);
+      drawLeg(hip, kn[0], kn[1], true);
+      drawTorso(hip, neck, A);
+      const hip2 = [hip[0], hip[1] + .6], feet2 = [feet[0], feet[1] + 1];
+      drawLeg(hip2, ik(hip2, feet2, 26, 25, -1)[0], feet2, false);
+      drawHead(neck, hc, A, { sway: Math.sin(u * TAU) * .6 });
+      drawArm(sh, el[0], el[1], false, false);
+      oar(0, 0, false);
+      seg([9, wl - 3], pin, 1.4, u2); seg([22, wl - 3], pin, 1.4, u2);
+      g.restore();
+      underVann(wl + .6, A.t, 0);
+    }
+  };
+
+  /* ---- Skøyter (langløp) ---- */
+  SPORTS.skate = {
+    name: 'Skøyter', ground: 'land', speed: 2,
+    draw(A) {
+      const th = A.t / 1.3 * TAU;
+      const hip = [0, -36 + 1.3 * Math.cos(2 * th)];
+      const lean = 70 + 3 * Math.sin(2 * th + .4);
+      const tv = up(lean), neck = add(hip, tv, 28), sh = add(hip, tv, 24.5), hc = add(neck, up(lean - 44), 8.6);
+      const nrm = [-tv[1], tv[0]];
+      const foot = (ph, dy) => {
+        const s = fract(ph / TAU);
+        let x, lift = 0;
+        if (s < .56) { const k = s / .56; x = 9 - 41 * Math.pow(k, 2.2); }
+        else { const k = (s - .56) / .44; x = -32 + 41 * easeInOut(k); lift = 12 * Math.sin(Math.PI * k); }
+        return { a: [x, -4 - lift + dy], lift };
+      };
+      const fn = foot(th, 0), ff = foot(th + Math.PI, -1.2);
+      const kn = ik(hip, fn.a, 26, 25, -1), kf = ik(hip, ff.a, 26, 25, -1);
+      const skate = (f, far) => {
+        const r = f.lift * 1.4 * D2R, d = [Math.cos(r), Math.sin(r)], nb = [-d[1], d[0]];
+        const b = add(f.a, nb, 4), c = far ? P.utstyrFjern : P.utstyr;
+        seg(add(b, d, -11), add(b, d, 17), 1.4, c);
+        seg(add(f.a, d, -1.5), add(b, d, -1.5), 1.4, c); seg(add(f.a, d, 6.5), add(b, d, 8.5), 1.4, c);
+        seg(add(f.a, d, -1.8), add(f.a, d, 6.5), 5.2, farge(far));
+      };
+      // armen som ligger på ryggen
+      const bh = add(add(hip, tv, 5), nrm, -7.2);
+      const be = ik(sh, bh, 16, 14.5, -1);
+      const aa = -35 - 70 * Math.cos(th), ae = limb(sh, aa, 16), ah = limb(ae, aa + 12, 14.5);
+      drawLeg(hip, kf[0], kf[1], true, { shoe: false }); skate(ff, true);
+      drawTorso(hip, neck, A);
+      drawArm(sh, be[0], be[1], true);
+      drawLeg(hip, kn[0], kn[1], false, { shoe: false }); skate(fn, false);
+      drawHead(neck, hc, A);
+      drawArm(sh, ae, ah, false);
+    }
+  };
+
+  /* ---- Rullestolløp ---- */
+  SPORTS.wheel = {
+    name: 'Rullestolløp', ground: 'land', speed: 2,
+    draw(A) {
+      const T = .95, u = fract(A.t / T), R = 20, C = [0, -R], rimR = 11, rot = A.dist / R;
+      let ang, rad, push;
+      if (u < .42) { const k = easeInOut(u / .42); ang = lerp(-110, 70, k); rad = rimR; push = Math.sin(Math.PI * u / .42); }
+      else { const k = (u - .42) / .58; ang = lerp(70, 250, easeInOut(k)); rad = rimR + 7 * Math.sin(Math.PI * k); push = 0; }
+      const hand = [C[0] + Math.cos(ang * D2R) * rad, C[1] + Math.sin(ang * D2R) * rad];
+      const hip = [-10, -26];
+      const lean = 76 + 5 * push;
+      const tv = up(lean), neck = add(hip, tv, 27), sh = add(hip, tv, 24), hc = add(neck, [7, -4.6 + 1.2 * push]);
+      const el = ik(sh, hand, 16, 14.5, 1), elf = ik(sh, [hand[0] - 1, hand[1] - 1], 16, 14.5, 1);
+      const knee = [13, -17], foot = [-9, -11.5];
+      const u2 = P.utstyr, uf = P.utstyrFjern;
+      drawArm(sh, elf[0], elf[1], true);
+      ring([C[0] - 1, C[1] - .6], rimR, 1.3, uf);
+      wheel([C[0] - 1, C[1] - .6], R, rot, uf);
+      seg([-6, -9], [54, -8], 2.4, u2); seg([36, -8.5], [41, -14], 2, u2); seg([41, -14], [45, -14], 2, u2);
+      wheel([58, -6.5], 6.5, rot * R / 6.5, u2);
+      seg([50, -8], [58, -6.5], 2.2, u2);
+      drawLeg(hip, knee, foot, true, { footDir: [-1, .15] });
+      // setebøtte
+      g.fillStyle = u2; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-20, -9); g.lineTo(17, -9);
+      g.quadraticCurveTo(22, -9, 21, -14); g.lineTo(16, -19); g.lineTo(2, -19); g.lineTo(-8, -22); g.closePath(); g.fill();
+      drawTorso(hip, neck, A);
+      drawHead(neck, hc, A);
+      wheel(C, R, rot, u2);
+      ring(C, rimR, 1.6, u2);
+      drawArm(sh, el[0], el[1], false, false);
+    }
+  };
+
+  /* ================================================================
+     LANDEMERKER – én flate i én farge, tegnet i egne enheter med base i
+     (0,0) og y opp negativ. box = [minX, maxX, høyde]. Detaljer som må
+     til for å kjenne dem igjen (buer, urskive, vinduer) skjæres ut med
+     ut(). Konturer som både fylles og klippes tegnes av en egen funksjon
+     to ganger (Path2D finnes ikke i alle workere).
+     ================================================================ */
+  const LM = {};
+
+  LM.holmenkollen = { box: [-150, 150, 218], draw(f) {
+    const hy = x => x <= 18 ? -104 * (1 - Math.pow(1 - clamp((x + 150) / 100, 0, 1), 2)) : -104 * Math.pow(1 - clamp((x - 18) / 132, 0, 1), 2.2);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-150, 0);
+    for (let x = -150; x <= 150; x += 3) g.lineTo(x, hy(x));
+    g.lineTo(150, 0); g.closePath(); g.fill();
+    const tb = hy(-70);
+    poly([-77, tb + 2, -63, tb + 2, -66, -200, -74, -200], f);
+    box(-81, -213, 22, 14, f); poly([-83, -213, -57, -213, -62, -218, -78, -218], f);
+    poly([-74, -206, -66, -210, 22, -110, 16, -104], f);
+    for (const x of [-44, -18]) { const t = (x + 70) / 88, yr = lerp(-205, -106, t); box(x - 1.6, yr, 3.2, hy(x) - yr + 2, f); }
+  }};
+
+  LM.eiffel = { box: [-80, 80, 300], draw(f) {
+    g.fillStyle = f; g.beginPath();
+    g.moveTo(-78, 0); g.quadraticCurveTo(-44, -40, -27, -100); g.quadraticCurveTo(-14, -170, -6, -252);
+    g.lineTo(-4.5, -268); g.lineTo(4.5, -268); g.lineTo(6, -252); g.quadraticCurveTo(14, -170, 27, -100);
+    g.quadraticCurveTo(44, -40, 78, 0); g.lineTo(56, 0); g.quadraticCurveTo(0, -82, -56, 0); g.closePath();
+    g.fill();
+    box(-47, -68, 94, 8, f);
+    box(-27, -131, 54, 6, f);
+    box(-7.5, -276, 15, 9, f); poly([-6, -276, 6, -276, 3, -281, -3, -281], f); box(-1.1, -300, 2.2, 20, f);
+  }};
+
+  LM.bigben = { box: [-135, 112, 306], draw(f) {
+    box(-120, -58, 205, 58, f); box(-121, -64, 207, 6, f);
+    box(-133, -150, 30, 150, f);
+    box(-18, -104, 16, 46, f); poly([-19, -104, -1, -104, -10, -134], f);
+    box(84, -190, 22, 190, f);
+    box(81, -233, 28, 43, f);
+    box(84, -253, 22, 20, f);
+    poly([82, -253, 108, -253, 103, -269, 87, -269], f);
+    poly([87, -269, 103, -269, 95, -306], f);
+    ut(() => ring([95, -211], 8.5, 2.2, UT));
+  }};
+
+  LM.liberty = { box: [12, 102, 240], draw(f) {
+    poly([12, 0, 102, 0, 94, -12, 20, -12], f);
+    poly([32, -12, 82, -12, 78, -78, 36, -78], f);
+    box(33, -84, 48, 6, f); box(39, -94, 36, 10, f);
+    poly([43, -94, 71, -94, 67, -120, 64, -150, 60, -166, 52, -166, 48, -150, 46, -120], f);
+    dot([56, -174], 6.5, f);
+    for (const a of [-160, -135, -112, -90, -68, -45, -20]) seg([56 + Math.cos(a * D2R) * 5, -174 + Math.sin(a * D2R) * 5], [56 + Math.cos(a * D2R) * 13, -174 + Math.sin(a * D2R) * 13], 2, f);
+    poly([49, -160, 54, -164, 47, -214, 43, -213], f);
+    box(42, -222, 5, 9, f); poly([39, -222, 50, -222, 48, -226, 41, -226], f);
+    g.fillStyle = f; g.beginPath(); g.ellipse(44.5, -232, 3.3, 5.6, 0, 0, TAU); g.fill();
+    poly([62, -150, 68, -146, 72, -140, 66, -138], f);
+    poly([64, -152, 72, -148, 69, -132, 61, -136], f);
+  }};
+
+  LM.rio = { box: [-170, 150, 240], draw(f) {
+    g.fillStyle = f; g.beginPath(); g.moveTo(-170, 0);
+    g.bezierCurveTo(-130, -25, -95, -70, -70, -110); g.bezierCurveTo(-50, -140, -30, -178, -14, -186);
+    g.lineTo(2, -186); g.bezierCurveTo(12, -176, 24, -140, 40, -100); g.bezierCurveTo(60, -55, 100, -15, 150, 0);
+    g.closePath(); g.fill();
+    box(-11, -193, 10, 8, f);
+    poly([-12, -193, 0, -193, -2.5, -227, -9.5, -227], f);
+    box(-27, -227.5, 42, 4.4, f);
+    dot([-6, -231.5], 3.4, f);
+  }};
+
+  LM.fuji = { box: [-190, 190, 162], draw(f) {
+    const fjell = () => {
+      g.beginPath();
+      g.moveTo(-190, 0); g.bezierCurveTo(-120, -40, -70, -110, -34, -152); g.lineTo(-22, -160); g.lineTo(-10, -156);
+      g.lineTo(0, -161); g.lineTo(12, -157); g.lineTo(22, -152); g.bezierCurveTo(60, -110, 120, -40, 190, 0); g.closePath();
+    };
+    fjell(); g.fillStyle = f; g.fill();
+    // snøhetta som en lysere flate
+    g.save(); fjell(); g.clip();
+    ut(() => poly([-200, -200, 200, -200, 200, -120, 40, -114, 30, -126, 20, -110, 10, -124, 0, -106, -10, -122, -20, -104, -30, -120, -40, -110, -52, -124, -200, -126], UT), .5);
+    g.restore();
+  }};
+
+  LM.colosseum = { box: [-160, 160, 118], draw(f) {
+    const kontur = () => {
+      g.beginPath();
+      g.moveTo(-160, 0); g.lineTo(-160, -104); g.quadraticCurveTo(-158, -111, -150, -112); g.lineTo(40, -112);
+      for (const [x, y] of [[50, -106], [60, -100], [70, -100], [80, -90], [92, -86], [100, -76], [112, -72], [122, -62], [134, -58], [146, -46], [160, -42]]) g.lineTo(x, y);
+      g.lineTo(160, 0); g.closePath();
+    };
+    kontur(); g.fillStyle = f; g.fill();
+    g.save(); kontur(); g.clip();
+    const N = 13;
+    ut(() => {
+      for (const [yb, yt] of [[-2, -28], [-33, -58], [-63, -87]]) {
+        for (let k = 0; k < N; k++) {
+          const u = -1 + (k + .5) * 2 / N, x = 154 * Math.sin(u * Math.PI / 2), w = 15 * Math.cos(u * Math.PI / 2) + 1.5;
+          roundArch(x, yb, w, yb - yt, UT);
+        }
+      }
+    }, .6);
+    g.restore();
+  }};
+
+  LM.giza = { box: [-176, 206, 142], draw(f) {
+    // skyggesiden er litt lysere – gir form uten en ny farge
+    const pyr = (cx, half, h) => {
+      poly([cx - half, 0, cx, -h, cx + half, 0], f);
+      ut(() => poly([cx + half * .25, 0, cx, -h, cx + half, 0], UT), .3);
+    };
+    pyr(172, 34, 58);
+    pyr(62, 88, 132);
+    pyr(-72, 104, 142);
+  }};
+
+  LM.sydney = { box: [-30, 186, 100], draw(f) {
+    const shell = (x0, x1, tx, ty) => {
+      const kant = () => {
+        g.beginPath(); g.moveTo(x1, -14);
+        g.quadraticCurveTo(x1 - 3, ty * .5, tx, ty); g.quadraticCurveTo(x0 - 6, ty * .45, x0, -14); g.closePath();
+      };
+      ut(() => { kant(); g.lineWidth = 3.4; g.strokeStyle = UT; g.stroke(); });
+      kant(); g.fillStyle = f; g.fill();
+    };
+    shell(150, 186, 138, -58); shell(118, 166, 102, -84); shell(92, 142, 78, -100);
+    shell(50, 82, 40, -56); shell(22, 64, 10, -80); shell(-4, 42, -14, -96);
+    shell(-26, -6, -30, -40);
+    poly([-30, 0, 186, 0, 186, -14, -22, -14], f);
+  }};
+
+  LM.bergen = { box: [-140, 139, 94], draw(f) {
+    // Bryggen: en rekke gavlhus med smale mellomrom
+    const hs = [62, 72, 58, 70, 64, 74, 60, 70, 64];
+    for (let i = 0; i < 9; i++) {
+      const w = 31, x = -140 + i * w, h = hs[i], gh = w * .62;
+      box(x + 1, -h, w - 2, h, f);
+      poly([x + .2, -h + .6, x + w - .2, -h + .6, x + w / 2, -h - gh], f);
+    }
+  }};
+
+  LM.goldengate = { box: [-225, 225, 176], draw(f) {
+    const kabel = (x0, y0, x1, y1, cx, cy) => {
+      g.strokeStyle = f; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke();
+    };
+    kabel(-106, -165, 106, -165, 0, 65);
+    kabel(-114, -165, -225, -46, -170, -84); kabel(114, -165, 225, -46, 170, -84);
+    box(-225, -44, 450, 6, f);
+    for (const tx of [-110, 110]) {
+      poly([tx - 6, 0, tx + 6, 0, tx + 4.5, -172, tx - 4.5, -172], f);
+      box(tx - 5.5, -176, 11, 4, f);
+      // portalåpningene mellom tverrbjelkene
+      ut(() => { for (const [y0, y1] of [[-8, -38], [-64, -98], [-102, -132], [-136, -158]]) box(tx - 1.7, y1, 3.4, y0 - y1, UT); });
+    }
+  }};
+
+  LM.taj = { box: [-156, 156, 212], draw(f) {
+    box(-156, -12, 312, 12, f);
+    for (const x of [-140, 140]) {
+      poly([x - 6, -12, x + 6, -12, x + 4.5, -150, x - 4.5, -150], f);
+      box(x - 5, -158, 10, 8, f);
+      g.fillStyle = f; g.beginPath(); g.arc(x, -158, 6, Math.PI, 0); g.fill();
+      seg([x, -163], [x, -171], 1.2, f);
+    }
+    poly([-70, -12, 70, -12, 70, -96, 60, -106, -60, -106, -70, -96], f);
+    ut(() => pointArch(0, -12, 34, 82, UT), .45);
+    box(-30, -124, 60, 18, f);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-33, -124);
+    g.bezierCurveTo(-52, -146, -42, -178, -6, -192); g.quadraticCurveTo(0, -196, 6, -192);
+    g.bezierCurveTo(42, -178, 52, -146, 33, -124); g.closePath(); g.fill();
+    seg([0, -194], [0, -212], 1.8, f);
+    for (const x of [-52, 52]) {
+      box(x - 9, -118, 18, 12, f);
+      g.fillStyle = f; g.beginPath(); g.moveTo(x - 10, -118);
+      g.bezierCurveTo(x - 13, -126, x - 8, -136, x, -140); g.bezierCurveTo(x + 8, -136, x + 13, -126, x + 10, -118); g.closePath(); g.fill();
+    }
+  }};
+
+  LM.pisa = { box: [18, 80, 184], draw(f) {
+    g.save(); g.translate(40, 0); g.rotate(5.5 * D2R);
+    box(-19, -150, 38, 150, f);
+    box(-14, -174, 28, 24, f);
+    poly([-15, -174, 15, -174, 10, -181, -10, -181], f);
+    // etasjeskillene
+    ut(() => { for (let i = 0; i <= 6; i++) g.fillRect(-20, -24 - i * 21, 40, 1.8); g.fillRect(-15, -152, 30, 1.6); }, .7);
+    g.restore();
+  }};
+
+  LM.tromso = { box: [-72, 72, 112], draw(f) {
+    // Ishavskatedralen: trekantskiver bakfra og fram, med en smal spalte mellom
+    const cx = -28;
+    for (let i = 7; i >= 0; i--) {
+      const ax = cx + i * 10.5, ay = -110 + i * 8.6, hb = 34 - i * 1.3;
+      if (i < 7) ut(() => { g.lineWidth = 2.6; g.strokeStyle = UT; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + hb, 0); g.stroke(); });
+      poly([ax - hb, 0, ax, ay, ax + hb, 0], f);
+    }
+    ut(() => poly([cx - 21, -8, cx, -94, cx + 21, -8], UT), .35);
+    box(cx - 44, -9, 88, 9, f);
+  }};
+
+  LM.dubai = { box: [-24, 24, 330], draw(f) {
+    const tiers = [[-22, 22, 0, -60], [-20, 18, -60, -108], [-16, 17, -108, -148], [-14, 13, -148, -184], [-10, 11, -184, -214], [-8, 7, -214, -240], [-5, 5, -240, -262], [-3, 3, -262, -284]];
+    for (const [l, r, y0, y1] of tiers) box(l, y1, r - l, y0 - y1, f);
+    poly([-2.2, -284, 2.2, -284, 0, -330], f);
+  }};
+
+  LM.greatwall = { box: [-200, 200, 122], draw(f) {
+    const ridge = x => -58 - 24 * Math.sin((x + 200) / 400 * Math.PI * 2.1 + .4) - 8 * Math.sin(x * .045 + 1.2);
+    g.fillStyle = f; g.beginPath(); g.moveTo(-200, 0);
+    for (let x = -200; x <= 200; x += 4) g.lineTo(x, ridge(x) - 8);
+    g.lineTo(200, 0); g.closePath(); g.fill();
+    for (let x = -198; x <= 198; x += 5) box(x, ridge(x) - 11.5, 2.6, 4, f);
+    // muren skilles fra fjellet med en lys stripe
+    ut(() => {
+      g.lineWidth = 1.4; g.strokeStyle = UT; g.beginPath();
+      for (let x = -200; x <= 200; x += 4) { const y = ridge(x) + 1; x === -200 ? g.moveTo(x, y) : g.lineTo(x, y); }
+      g.stroke();
+    }, .6);
+    for (const x of [-152, -64, 24, 118, 176]) {
+      const y = ridge(x);
+      box(x - 8, y - 27, 16, 27, f);
+      for (let k = 0; k < 4; k++) box(x - 8 + k * 4.6, y - 30.5, 2.6, 3.5, f);
+      ut(() => roundArch(x, y - 12, 4, 8, UT), .6);
+    }
+  }};
+
+  /* ---------- steder ---------- */
+  const PLACES = [
+    { lm: 'holmenkollen', navn: 'Holmenkollbakken', by: 'Oslo' },
+    { lm: 'eiffel', navn: 'Eiffeltårnet', by: 'Paris' },
+    { lm: 'bigben', navn: 'Big Ben', by: 'London' },
+    { lm: 'liberty', navn: 'Frihetsgudinnen', by: 'New York' },
+    { lm: 'rio', navn: 'Kristus-statuen', by: 'Rio de Janeiro' },
+    { lm: 'fuji', navn: 'Fuji', by: 'Japan' },
+    { lm: 'colosseum', navn: 'Colosseum', by: 'Roma' },
+    { lm: 'giza', navn: 'Pyramidene', by: 'Giza' },
+    { lm: 'sydney', navn: 'Operahuset', by: 'Sydney' },
+    { lm: 'bergen', navn: 'Bryggen', by: 'Bergen' },
+    { lm: 'goldengate', navn: 'Golden Gate', by: 'San Francisco' },
+    { lm: 'taj', navn: 'Taj Mahal', by: 'Agra' },
+    { lm: 'pisa', navn: 'Det skjeve tårnet', by: 'Pisa' },
+    { lm: 'tromso', navn: 'Ishavskatedralen', by: 'Tromsø' },
+    { lm: 'dubai', navn: 'Burj Khalifa', by: 'Dubai' },
+    { lm: 'greatwall', navn: 'Den kinesiske mur', by: 'Beijing' },
+  ];
+
+  // Løping vises alltid både som mann og kvinne. De andre bytter kjønn hver runde.
+  const ACTS = [
+    { sport: 'run', gender: 'm', fixed: true }, { sport: 'run', gender: 'f', fixed: true },
+    { sport: 'bike', gender: 'f' }, { sport: 'ski', gender: 'm' }, { sport: 'swim', gender: 'f' },
+    { sport: 'row', gender: 'm' }, { sport: 'skate', gender: 'f' }, { sport: 'wheel', gender: 'm' },
+  ];
+
+  /* ================================================================
+     MOTOR
+     ================================================================ */
+  // Bakkelinja ligger på 60 % av høyden. Samme tall som top: 60 % for
+  // teksten i lasteskjerm.css – endres de, må begge endres.
+  const BAKKE = .6;
+  let cvs = null, ctx = null, reduceMotion = false, frameId = 0, stoppet = false;
+  let W = 1, H = 1, DPR = 1, U = 1, groundY = 0, athX = 0, lmCX = 0, portrait = true, linjeGrad = null;
+  const AX = 190, AY = 165, LWU = 380, LHU = 232;
+  const layers = [0, 1].map(() => { const c = vert.lerret(1, 1); return { c, x: c.getContext('2d') }; });
+  const lmCache = new Map();
+
+  const st = {
+    ai: 0, round: 0,
+    cur: null, prev: null, actK: 1,
+    place: 0, placePrev: -1, placeK: 1, placeAge: 0, prevAge: 0,
+    // Stedet byttes kort tid etter idretten, så får kombinasjonen stå litt før neste idrett.
+    timer: 0, actToPlace: 1.5, placeToAct: 3.2, nextKind: 'act',
+    t: 0, scroll: 0, speed: 1,
+  };
+
+  function makeAthlete(entry, round) {
+    const gender = entry.fixed || round % 2 === 0 ? entry.gender : (entry.gender === 'm' ? 'f' : 'm');
+    return { sp: SPORTS[entry.sport], key: entry.sport, gender, t: Math.random() * 2, dist: 0 };
+  }
+
+  function layout(w, h, dpr) {
+    W = Math.max(1, w); H = Math.max(1, h);
+    DPR = Math.min(2, dpr || 1);
+    cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
+    portrait = W < H * 1.1;
+    U = clamp(Math.min(W / 300, H / 560), .7, 1.8);
+    groundY = Math.round(H * BAKKE);
+    athX = portrait ? W * .5 : W * .46;
+    lmCX = portrait ? W * .5 : W * .56;
+    for (const L of layers) { L.c.width = Math.ceil(LWU * U * DPR); L.c.height = Math.ceil(LHU * U * DPR); }
+    // Bakkelinja tones ut mot kantene.
+    linjeGrad = ctx.createLinearGradient(0, 0, W, 0);
+    linjeGrad.addColorStop(0, css(P.linje, 0)); linjeGrad.addColorStop(.2, css(P.linje));
+    linjeGrad.addColorStop(.8, css(P.linje)); linjeGrad.addColorStop(1, css(P.linje, 0));
+    lmCache.clear();
+  }
+
+  /* ---------- landemerke-cache ---------- */
+  function landmarkImage(pi) {
+    let c = lmCache.get(pi);
+    if (c) return c;
+    const lm = LM[PLACES[pi].lm];
+    const [x0, x1, h] = lm.box, bw = x1 - x0;
+    const maxH = Math.max(60, (groundY - 70) * .82), maxW = W * (portrait ? .86 : .62);
+    const s = Math.min(maxH / h, maxW / bw);
+    const pad = 6;
+    const cv = vert.lerret(Math.ceil((bw * s + pad * 2) * DPR), Math.ceil((h * s + pad * 2) * DPR));
+    const lc = cv.getContext('2d');
+    lc.setTransform(DPR * s, 0, 0, DPR * s, DPR * (pad - x0 * s), DPR * (pad + h * s));
+    lc.lineCap = 'round'; lc.lineJoin = 'round';
+    g = lc;
+    lm.draw(P.lm);
+    c = { cv, w: cv.width / DPR, h: cv.height / DPR, ox: pad - x0 * s, oy: pad + h * s, cx: (x0 + x1) / 2 * s };
+    lmCache.set(pi, c);
+    return c;
+  }
+  function drawLandmark(pi, a, dx) {
+    if (a <= .01) return;
+    const c = landmarkImage(pi);
+    const ox = lmCX + dx - c.cx;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.drawImage(c.cv, ox - c.ox, groundY - c.oy, c.w, c.h);
+    ctx.restore();
+  }
+
+  /* ---------- bakken: en linje, eller en bølge for vann ---------- */
+  function bakke(type, a) {
+    if (a <= .01) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.fillStyle = linjeGrad; ctx.strokeStyle = linjeGrad;
+    const lw = Math.max(1, 1.2 * U);
+    if (type === 'water') {
+      const y0 = groundY - 6.5 * U;
+      ctx.lineWidth = lw; ctx.beginPath();
+      for (let x = 0; x <= W + 6; x += 6) {
+        const y = y0 + Math.sin((x + st.scroll) / (8 * U)) * 1.3 * U;
+        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillRect(0, groundY - lw / 2, W, lw);
+    }
+    // korte streker under linja som glir forbi – det er de som gir fart
+    ctx.globalAlpha = a * .5;
+    const per = 40 * U, x0 = -fract(st.scroll / per) * per, y = groundY + 9 * U;
+    for (let x = x0; x < W; x += per) ctx.fillRect(x, y, 12 * U, lw);
+    ctx.restore();
+  }
+
+  /* ---------- utøverlag ---------- */
+  function renderAthlete(A, L) {
+    const c = L.c, x = L.x;
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height);
+    x.setTransform(DPR * U, 0, 0, DPR * U, DPR * U * AX, DPR * U * AY);
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    g = x;
+    K = (P.idrett[A.key] || {})[A.gender] || P.reserve;
+    A.sp.draw(A);
+  }
+  function drawAthlete(A, L, alpha, dxU) {
+    if (!A || alpha <= .01) return;
+    renderAthlete(A, L);
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.drawImage(L.c, athX + dxU * U - AX * U, groundY - AY * U, LWU * U, LHU * U);
+    ctx.restore();
+  }
+
+  /* ---------- sekvens ---------- */
+  function meldAktivitet() {
+    vert.post({ type: 'aktivitet', navn: st.cur.sp.name });
+    meldTilstand();
+  }
+  function meldSted() {
+    const p = PLACES[st.place];
+    vert.post({ type: 'sted', tekst: p.navn + ', ' + p.by });
+    meldTilstand();
+  }
+  function meldTilstand() {
+    vert.post({ type: 'tilstand', ai: st.ai, pi: st.place, round: st.round });
+  }
+  function nextActivity() {
+    st.ai = (st.ai + 1) % ACTS.length;
+    if (st.ai === 0) st.round++;
+    st.prev = st.cur; st.cur = makeAthlete(ACTS[st.ai], st.round); st.actK = 0;
+    meldAktivitet();
+  }
+  function nextPlace() {
+    st.placePrev = st.place; st.prevAge = st.placeAge;
+    st.place = (st.place + 1) % PLACES.length; st.placeK = 0; st.placeAge = 0;
+    lmCache.forEach((_, k) => { if (k !== st.place && k !== st.placePrev) lmCache.delete(k); });
+    meldSted();
+  }
+
+  /* ---------- oppdatering ---------- */
+  function update(dt) {
+    st.t += dt;
+    st.timer += dt;
+    if (st.timer >= (st.nextKind === 'place' ? st.actToPlace : st.placeToAct)) {
+      st.timer = 0;
+      if (st.nextKind === 'act') { nextActivity(); st.nextKind = 'place'; } else { nextPlace(); st.nextKind = 'act'; }
+    }
+    st.actK = Math.min(1, st.actK + dt / .95);
+    st.placeK = Math.min(1, st.placeK + dt / 1.2);
+    st.placeAge += dt; st.prevAge += dt;
+    const ak = easeInOut(st.actK);
+    st.speed = st.prev && st.actK < 1 ? lerp(st.prev.sp.speed, st.cur.sp.speed, ak) : st.cur.sp.speed;
+    const vU = st.speed * 120;
+    st.scroll += vU * U * dt;
+    for (const A of [st.cur, st.actK < 1 ? st.prev : null]) {
+      if (!A) continue;
+      A.t += dt; A.dist += vU * dt;
+    }
+    if (st.actK >= 1) st.prev = null;
+  }
+
+  /* ---------- tegning av hele scenen ---------- */
+  function render() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    // landemerket glir sakte mot venstre og tones over i det neste
+    const hasPrev = st.placePrev >= 0 && st.placeK < 1;
+    const k = hasPrev ? easeInOut(st.placeK) : 1;
+    const drift = age => W * .03 - Math.min(age, 14) * 4 * U;
+    const slide = reduceMotion ? 0 : 1;
+    if (hasPrev) drawLandmark(st.placePrev, 1 - k, drift(st.prevAge) - k * 30 * U * slide);
+    drawLandmark(st.place, k, drift(st.placeAge) + (1 - k) * 40 * U * slide);
+    // Bakken. Vannlinja tegnes over utøveren, så svømmeren ligger i vannet.
+    const ak = easeInOut(st.actK), bytter = st.prev && st.actK < 1;
+    const gCur = st.cur.sp.ground, gPrev = bytter ? st.prev.sp.ground : gCur;
+    const lag = gPrev !== gCur ? [[gPrev, 1 - ak], [gCur, ak]] : [[gCur, 1]];
+    for (const [t, a] of lag) if (t !== 'water') bakke(t, a);
+    // utøvere – stafettveksling: den gamle drar ifra, den nye kommer inn bakfra
+    if (bytter) {
+      const out = reduceMotion ? 0 : easeIn(st.actK) * 110;
+      drawAthlete(st.prev, layers[1], 1 - smooth(0, .75, st.actK), out);
+      drawAthlete(st.cur, layers[0], smooth(.2, 1, st.actK), reduceMotion ? 0 : -(1 - easeOut(st.actK)) * 110);
+    } else drawAthlete(st.cur, layers[0], 1, 0);
+    for (const [t, a] of lag) if (t === 'water') bakke(t, a);
+  }
+
+  /* ---------- løkke og meldinger ---------- */
+  let last = 0;
+  function frame(now) {
+    if (stoppet) return;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)) * (reduceMotion ? .6 : 1);
+    last = now;
+    update(dt);
+    render();
+    frameId = raf(frame);
+  }
+  const api = {
+    start(d) {
+      cvs = d.canvas; ctx = cvs.getContext('2d');
+      reduceMotion = !!d.reduceMotion;
+      settPalett(d.palett);
+      // Fortsett der forrige oppstart slapp: neste idrett og neste sted.
+      const t = d.tilstand || {};
+      const forrigeAi = Number.isInteger(t.ai) ? t.ai : ACTS.length - 1;
+      st.round = Number.isInteger(t.round) ? t.round : 0;
+      st.ai = (forrigeAi + 1) % ACTS.length;
+      if (st.ai === 0 && Number.isInteger(t.ai)) st.round++;
+      st.place = Number.isInteger(t.pi) ? (t.pi + 1) % PLACES.length : 0;
+      st.cur = makeAthlete(ACTS[st.ai], st.round);
+      layout(d.w, d.h, d.dpr);
+      meldAktivitet(); meldSted();
+      render();
+      last = performance.now();
+      frameId = raf(frame);
+    },
+    resize(d) { if (ctx) { layout(d.w, d.h, d.dpr); render(); } },
+    stopp() {
+      stoppet = true; caf(frameId);
+      if (iWorker) self.close();
+    },
+  };
+  if (iWorker) self.onmessage = e => { const f = api[e.data && e.data.type]; if (f) f(e.data); };
+  return api;
+}
+
+/* ---------- Hovedtråden: lag, tekst og livsløp ------------------ */
+(function () {
+  'use strict';
+  if (window.ATLasteskjerm || !document.body) return;
+
+  const MIN_SYNLIG = 1500;             // ms – ikke blink forbi på en rask oppstart
+  const UTTONING = 480;                // ms – samme som transition i lasteskjerm.css
+  const NODSTOPP = 40000;              // ms – forsvinner uansett hvis appen aldri melder seg
+  const PAUSE_FOR_NY_START = 30 * 60 * 1000;
+  const K_TILSTAND = 'at-lasteskjerm';
+  const K_OPPSTART = 'at-oppstart-ms';
+  const K_GRUNN = 'at-lasteskjerm-grunn';
+  const K_TEMA = 'at-theme';           // mer.jsx: MER_THEME_KEY
+  const K_AKSENT = 'at-aksent';        // mer.jsx: MER_AKSENT_KEY
+  // Samme lys/mørk-varianter som MER_AKSENTER i mer.jsx.
+  const AKSENTER = {
+    lilla: ['#5E5CE6', '#7D7AFF'], blaa: ['#0A66D0', '#4C9AFF'], gronn: ['#1F7A47', '#3DCE7A'],
+    oransje: ['#B85A10', '#FF9F45'], rod: ['#C0224A', '#FF5C86'], grafitt: ['#2C2E36', '#D5D8DF'],
+  };
+
+  // Menn har idrettens farge fra appen (styles.css, samme verdi i begge
+  // drakter; hex-verdien er reserve hvis stilarket ikke er lastet). Roing,
+  // skøyter og rullestolløp har ingen egen idrett i appen og låner en farge
+  // fra samme familie.
+  // Kvinner har en nabofarge: samme lyshet og metning (oklch L 0,66), men
+  // tonen 30–45° unna idrettens. Da bytter fargen også når bare kjønnet
+  // bytter (løper mann → løper kvinne), og idretten kjennes fortsatt igjen.
+  // Nabofargene er regnet ut så to utøvere på rad aldri ligner hverandre
+  // (ΔE i OKLab ≥ 0,079), også mellom rundene der kjønnene bytter plass.
+  const IDRETTSFARGER = {
+    run:   { m: ['--run', '#DC6E41'],    f: '#C18501' },
+    bike:  { m: ['--bike', '#5992E7'],   f: '#05A3BE' },
+    ski:   { m: ['--xc', '#9680DF'],     f: '#C170BB' },
+    swim:  { m: ['--swim', '#1AA69F'],   f: '#059ED9' },
+    row:   { m: ['--walk', '#71A342'],   f: '#AC9008' },
+    skate: { m: ['--alpine', '#1AA1C9'], f: '#09A996' },
+    wheel: { m: ['--str', '#C86EB0'],    f: '#A67AD6' },
+  };
+
+  const les = (lager, k) => { try { return lager.getItem(k); } catch (e) { return null; } };
+  const skriv = (lager, k, v) => { try { lager.setItem(k, v); } catch (e) { /* privat modus o.l. */ } };
+  const fjern = (lager, k) => { try { lager.removeItem(k); } catch (e) { /* ignoreres */ } };
+
+  // Drakt og hovedfarge som i appen. mer.jsx har ikke kjørt ennå ved en
+  // kald start, så valget leses fra lageret; ved en omstart etter pause
+  // står data-theme allerede på <html>.
+  function palett() {
+    const valgt = document.documentElement.getAttribute('data-theme') || les(localStorage, K_TEMA);
+    const mork = valgt === 'dark' || (valgt !== 'light' &&
+      !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    const a = AKSENTER[les(localStorage, K_AKSENT)] || AKSENTER.lilla;
+    const stil = getComputedStyle(document.documentElement);
+    const idrett = {};
+    for (const k in IDRETTSFARGER) {
+      const [navn, reserve] = IDRETTSFARGER[k].m;
+      const v = stil.getPropertyValue(navn).trim();
+      idrett[k] = { m: /^#[0-9a-f]{6}$/i.test(v) ? v : reserve, f: IDRETTSFARGER[k].f };
+    }
+    return mork
+      ? { mork: true, bg: '#0E0F13', ink: '#F4F5F7', aksent: a[1], idrett }
+      : { mork: false, bg: '#F2F2F7', ink: '#000000', aksent: a[0], idrett };
+  }
+
+  let aktiv = null;   // { el, motor, worker, ro, startet, ferdig }
+
+  function vis(grunn) {
+    if (aktiv) return;
+    const farger = palett();
+    const el = document.createElement('div');
+    el.className = 'ls';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-label', grunn === 'pause' ? 'Henter ferske data' : 'Starter AI Trener');
+    el.style.setProperty('--ls-bg', farger.bg);
+    el.style.setProperty('--ls-ink', farger.ink);
+    el.style.setProperty('--ls-aksent', farger.aksent);
+    el.innerHTML =
+      '<canvas class="ls-scene" aria-hidden="true"></canvas>' +
+      '<div class="ls-tekst" aria-hidden="true">' +
+        '<div class="ls-idrett"><span class="ls-bytt" data-felt="idrett"></span></div>' +
+        '<div class="ls-sted"><span class="ls-bytt" data-felt="sted"></span></div>' +
+        '<div class="ls-bar"><i></i><b></b></div>' +
+      '</div>' +
+      '<div class="ls-merke" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 2c.6 5.4 4.6 9.4 10 10-5.4.6-9.4 4.6-10 10-.6-5.4-4.6-9.4-10-10 5.4-.6 9.4-4.6 10-10z"/></svg>' +
+        'AI Trener</div>';
+    document.body.insertBefore(el, document.body.firstChild);
+
+    const felt = n => el.querySelector('[data-felt="' + n + '"]');
+    const bytt = (node, tekst) => {
+      if (!node) return;
+      node.classList.remove('inn'); void node.offsetWidth;
+      node.textContent = tekst;
+      node.classList.add('inn');
+    };
+
+    // Fremdriftslinja er en ren CSS-animasjon på transform, så den glir også
+    // mens hovedtråden er opptatt. Lengden er forrige oppstartstid.
+    const forventet = Math.min(20000, Math.max(2500, Number(les(localStorage, K_OPPSTART)) || 7000));
+    el.style.setProperty('--ls-tid', forventet + 'ms');
+
+    const onMelding = m => {
+      if (!m || !aktiv) return;
+      if (m.type === 'aktivitet') bytt(felt('idrett'), m.navn);
+      else if (m.type === 'sted') bytt(felt('sted'), m.tekst);
+      else if (m.type === 'tilstand') skriv(localStorage, K_TILSTAND, JSON.stringify({ ai: m.ai, pi: m.pi, round: m.round }));
+    };
+
+    const canvas = el.querySelector('canvas');
+    const r = el.getBoundingClientRect();
+    let tilstand = null;
+    try { tilstand = JSON.parse(les(localStorage, K_TILSTAND) || 'null'); } catch (e) { tilstand = null; }
+    const oppstart = {
+      type: 'start', w: r.width, h: r.height, dpr: window.devicePixelRatio || 1,
+      reduceMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
+      tilstand, palett: farger,
+    };
+
+    const a = aktiv = { el, motor: null, worker: null, ro: null, startet: performance.now(), ferdig: false, grunn };
+
+    // Reserve: samme motor på hovedtråden. Et lerret som er overført til en
+    // worker kan ikke brukes igjen, så det byttes ut med et nytt.
+    const paHovedtraden = () => {
+      if (a.ferdig || a.motor) return;
+      const gammelt = el.querySelector('.ls-scene');
+      const nytt = document.createElement('canvas');
+      nytt.className = 'ls-scene'; nytt.setAttribute('aria-hidden', 'true');
+      if (gammelt) gammelt.replaceWith(nytt); else el.insertBefore(nytt, el.firstChild);
+      const b = el.getBoundingClientRect();
+      const motor = lasteskjermMotor({
+        post: onMelding,
+        lerret: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+      });
+      motor.start(Object.assign({}, oppstart, { canvas: nytt, w: b.width, h: b.height }));
+      a.motor = motor;
+    };
+
+    let worker = null;
+    if (typeof canvas.transferControlToOffscreen === 'function' && typeof Worker === 'function' && typeof OffscreenCanvas === 'function') {
+      try {
+        const kilde = '(' + lasteskjermMotor.toString() + ')(null);';
+        const url = URL.createObjectURL(new Blob([kilde], { type: 'text/javascript' }));
+        worker = new Worker(url);
+        URL.revokeObjectURL(url);
+        worker.onmessage = e => onMelding(e.data);
+        // Krasjer workeren (f.eks. en nettleser med halv OffscreenCanvas-
+        // støtte), tegner vi videre på hovedtråden i stedet for å fryse.
+        worker.onerror = () => {
+          if (a.worker !== worker) return;
+          a.worker = null; worker.terminate();
+          paHovedtraden();
+        };
+        const off = canvas.transferControlToOffscreen();
+        worker.postMessage(Object.assign({ canvas: off }, oppstart), [off]);
+        a.worker = worker;
+      } catch (e) {
+        if (worker) worker.terminate();
+        a.worker = null;
+      }
+    }
+    if (!a.worker) paHovedtraden();
+
+    if (typeof ResizeObserver === 'function') {
+      aktiv.ro = new ResizeObserver(() => {
+        if (!aktiv) return;
+        const b = el.getBoundingClientRect();
+        const d = { type: 'resize', w: b.width, h: b.height, dpr: window.devicePixelRatio || 1 };
+        if (aktiv.worker) aktiv.worker.postMessage(d); else if (aktiv.motor) aktiv.motor.resize(d);
+      });
+      aktiv.ro.observe(el);
+    }
+    aktiv.nodstopp = setTimeout(ferdig, NODSTOPP);
+  }
+
+  function ferdig() {
+    const a = aktiv;
+    if (!a || a.ferdig) return;
+    a.ferdig = true;
+    clearTimeout(a.nodstopp);
+    // Husk hvor lang en vanlig oppstart er, så linja treffer neste gang.
+    if (a.grunn !== 'pause') {
+      const malt = performance.now();
+      const gammel = Number(les(localStorage, K_OPPSTART)) || malt;
+      skriv(localStorage, K_OPPSTART, String(Math.round(gammel * .6 + malt * .4)));
+    }
+    const vent = Math.max(0, MIN_SYNLIG - (performance.now() - a.startet));
+    setTimeout(() => {
+      a.el.classList.add('ls--ferdig', 'ls--ut');
+      setTimeout(() => {
+        if (a.ro) a.ro.disconnect();
+        if (a.worker) { a.worker.postMessage({ type: 'stopp' }); setTimeout(() => a.worker.terminate(), 100); }
+        if (a.motor) a.motor.stopp();
+        a.el.remove();
+        if (aktiv === a) aktiv = null;
+      }, UTTONING);
+    }, vent);
+  }
+
+  /* ---------- Tilbake etter en pause ----------
+     Har appen ligget i bakgrunnen i 30 min eller mer, lastes den på nytt så
+     dataene er ferske, og lasteskjermen dekker oppstarten. Ikke uten nett
+     (da er det ingenting å hente), og ikke hvis du står midt i en tekst. */
+  let skjultFra = 0;
+  const skriverNoe = () => {
+    const a = document.activeElement;
+    if (!a) return false;
+    const tekstfelt = a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|email|url|tel|number|)$/i.test(a.type || ''));
+    return tekstfelt && String(a.value || '').trim() !== '';
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { skjultFra = Date.now(); return; }
+    if (!skjultFra) return;
+    const borte = Date.now() - skjultFra;
+    skjultFra = 0;
+    if (borte < PAUSE_FOR_NY_START || navigator.onLine === false || skriverNoe()) return;
+    skriv(sessionStorage, K_GRUNN, 'pause');
+    vis('pause');
+    // To bilder, så lasteskjermen rekker å vises før siden byttes ut.
+    requestAnimationFrame(() => requestAnimationFrame(() => location.reload()));
+  });
+
+  window.ATLasteskjerm = { ferdig, vis };
+
+  const grunn = les(sessionStorage, K_GRUNN);
+  fjern(sessionStorage, K_GRUNN);
+  vis(grunn === 'pause' ? 'pause' : 'start');
+})();
+
+</script>
+<script>
+(function () {
+  const root = document.documentElement;
+  const les = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const skriv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignoreres */ } };
+  const mork = () => {
+    const t = root.getAttribute('data-theme');
+    return t ? t === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  };
+  const klar = document.getElementById('klar');
+
+  function tegnStyr() {
+    const m = mork();
+    document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tema === 'dark') === m)));
+    klar.textContent = document.querySelector('.ls') ? 'Appen er klar' : 'Start på nytt';
+  }
+
+  // Lukk den som vises (med uttoning), og vis en ny når den er borte.
+  let venter = false;
+  function startPaNytt() {
+    if (venter) return;
+    venter = true;
+    window.ATLasteskjerm.ferdig();
+    (function sjekk() {
+      if (document.querySelector('.ls')) return setTimeout(sjekk, 60);
+      skriv('at-oppstart-ms', '7000');
+      window.ATLasteskjerm.vis('start');
+      venter = false; tegnStyr();
+    })();
+  }
+
+  document.querySelectorAll('[data-tema]').forEach(b => b.addEventListener('click', () => {
+    root.setAttribute('data-theme', b.dataset.tema);
+    tegnStyr(); startPaNytt();
+  }));
+  klar.addEventListener('click', () => {
+    if (document.querySelector('.ls')) {
+      window.ATLasteskjerm.ferdig();
+      (function sjekk() { if (document.querySelector('.ls')) return setTimeout(sjekk, 60); skriv('at-oppstart-ms', '7000'); tegnStyr(); })();
+    } else {
+      window.ATLasteskjerm.vis('start'); tegnStyr();
+    }
+  });
+  tegnStyr();
+})();
+</script>
+</body>
+</html>
